@@ -281,6 +281,48 @@ FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t *out,
     return -3;
   }
 }
+FFI_PLUGIN_EXPORT int bluez_obex_get_paired_devices(uint8_t *out,
+                                                    uint32_t capacity) {
+  try {
+    auto sys_conn = sdbus::createSystemBusConnection();
+    auto proxy =
+        sdbus::createProxy(*sys_conn, sdbus::ServiceName{"org.bluez"},
+                           sdbus::ObjectPath{"/"});
+    std::map<sdbus::ObjectPath,
+             std::map<std::string, std::map<std::string, sdbus::Variant>>>
+        objects;
+    proxy->callMethod("GetManagedObjects")
+        .onInterface("org.freedesktop.DBus.ObjectManager")
+        .storeResultsTo(objects);
+
+    BlueZPairedDevices result;
+    for (const auto &[path, interfaces] : objects) {
+      if (interfaces.count("org.bluez.Device1")) {
+        const auto &props = interfaces.at("org.bluez.Device1");
+        if (props.count("Address") && props.count("Paired") &&
+            props.at("Paired").get<bool>()) {
+          BlueZPairedDevice dev;
+          dev.address = props.at("Address").get<std::string>();
+          if (props.count("Alias")) {
+            dev.name = props.at("Alias").get<std::string>();
+          } else if (props.count("Name")) {
+            dev.name = props.at("Name").get<std::string>();
+          } else {
+            dev.name = dev.address;
+          }
+          result.devices.push_back(dev);
+        }
+      }
+    }
+    return copy_payload(glz::encode(result), out, capacity);
+  } catch (const sdbus::Error &e) {
+    fprintf(stderr, "bluez_obex_get_paired_devices: %s\n", e.what());
+    return -3;
+  } catch (const std::exception &e) {
+    fprintf(stderr, "bluez_obex_get_paired_devices: %s\n", e.what());
+    return -3;
+  }
+}
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_phonebook_get_properties(void *handle, const char *phonebook_path,

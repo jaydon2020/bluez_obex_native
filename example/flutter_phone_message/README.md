@@ -11,8 +11,8 @@ The app mirrors the sibling example apps in this workspace:
 It supports two modes:
 
 * **Simulated endpoint**: default, no Bluetooth hardware required.
-* **Physical BlueZ OBEX**: disable the toggle, enter a paired phone address,
-  and use `org.bluez.obex` on the session bus.
+* **Physical BlueZ OBEX**: disable the toggle, refresh paired devices, choose a
+  phone from the dropdown, and use `org.bluez.obex` on the session bus.
 
 Run:
 
@@ -25,4 +25,3 @@ Build:
 ```sh
 flutter build linux
 ```
-

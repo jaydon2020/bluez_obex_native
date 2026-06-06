@@ -211,3 +211,16 @@ class BlueZObexError {
     required this.message,
   });
 }
+
+class BlueZPairedDevice {
+  final String address;
+  final String name;
+
+  const BlueZPairedDevice({required this.address, required this.name});
+}
+
+class BlueZPairedDevices {
+  final List<BlueZPairedDevice> devices;
+
+  const BlueZPairedDevices({this.devices = const []});
+}

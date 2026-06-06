@@ -15,6 +15,7 @@ import 'native_bridge.dart';
 abstract class BlueZObexBackend {
   Stream<BlueZObexEvent> get events;
 
+  Future<List<BlueZPairedDevice>> getPairedDevices();
   Future<BlueZObexManagedObjects> getManagedObjects();
   Future<BlueZObexSessionProps> createSession(
     String destination, {
@@ -100,6 +101,10 @@ class BlueZObexClient {
 
   /// ObjectManager and property-change events emitted by the backend.
   Stream<BlueZObexEvent> get events => _backend.events;
+
+  Future<List<BlueZPairedDevice>> getPairedDevices() {
+    return _backend.getPairedDevices();
+  }
 
   Future<BlueZObexManagedObjects> getManagedObjects() {
     return _backend.getManagedObjects();
@@ -355,6 +360,15 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
 
   @override
   Stream<BlueZObexEvent> get events => _eventsController.stream;
+
+  @override
+  Future<List<BlueZPairedDevice>> getPairedDevices() async {
+    final result = _bridge.readGlaze<BlueZPairedDevices>(
+      'bluez_obex_get_paired_devices',
+      nativeBindings.bluez_obex_get_paired_devices,
+    );
+    return result.devices;
+  }
 
   @override
   Future<BlueZObexManagedObjects> getManagedObjects() async {
@@ -898,6 +912,13 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
 
   @override
   Stream<BlueZObexEvent> get events => _eventsController.stream;
+
+  @override
+  Future<List<BlueZPairedDevice>> getPairedDevices() async {
+    return const [
+      BlueZPairedDevice(address: 'AA:BB:CC:DD:EE:FF', name: 'Simulated phone'),
+    ];
+  }
 
   @override
   Future<BlueZObexManagedObjects> getManagedObjects() async {

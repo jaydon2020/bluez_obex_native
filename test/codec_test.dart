@@ -46,6 +46,17 @@ void _writeStringList(BytesBuilder b, List<String> values) {
   }
 }
 
+void _writePairedDevices(
+  BytesBuilder b,
+  List<(String address, String name)> devices,
+) {
+  _writeUint32(b, devices.length);
+  for (final device in devices) {
+    _writeString(b, device.$1);
+    _writeString(b, device.$2);
+  }
+}
+
 void _writePhonebookEntries(
   BytesBuilder b,
   List<(String vcard, String name)> entries,
@@ -366,6 +377,25 @@ void main() {
       expect(error.objectPath, '/org/bluez/obex/client/session0');
       expect(error.name, 'org.bluez.obex.Error.Failed');
       expect(error.message, 'Transfer failed');
+    });
+
+    test('decodes BlueZPairedDevices', () {
+      final b = BytesBuilder();
+      _writePairedDevices(b, [
+        ('AA:BB:CC:DD:EE:FF', 'Pixel'),
+        ('11:22:33:44:55:66', 'Headset'),
+      ]);
+
+      final result = GlazeCodec.decode<BlueZPairedDevices>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(result.devices.length, 2);
+      expect(result.devices[0].address, 'AA:BB:CC:DD:EE:FF');
+      expect(result.devices[0].name, 'Pixel');
+      expect(result.devices[1].address, '11:22:33:44:55:66');
+      expect(result.devices[1].name, 'Headset');
     });
 
     test('throws on unknown type', () {
