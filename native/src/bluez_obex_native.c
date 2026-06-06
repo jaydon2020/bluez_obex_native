@@ -1,5 +1,11 @@
 #include "bluez_obex_native.h"
 
+#if _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
 // A very short-lived native function.
 //
 // For very short-lived functions, it is fine to call them on the main isolate.
