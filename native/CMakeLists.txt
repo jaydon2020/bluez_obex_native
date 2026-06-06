@@ -14,6 +14,28 @@ set(SDBUSCPP_INSTALL OFF CACHE BOOL "" FORCE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(third_party/sdbus-cpp EXCLUDE_FROM_ALL)
 
+add_library(bluez_obex_native_core STATIC
+  src/bluez_obex_native.c
+  src/dart_api_dl.c
+)
+
+target_include_directories(bluez_obex_native_core
+  PUBLIC include
+)
+
+target_compile_definitions(bluez_obex_native_core
+  PUBLIC DART_SHARED_LIB
+)
+
+target_link_libraries(bluez_obex_native_core
+  PUBLIC sdbus-c++ pthread
+)
+
+set_target_properties(bluez_obex_native_core PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  LINKER_LANGUAGE CXX
+)
+
 add_library(bluez_obex_native SHARED
   src/bluez_obex_native.c
   src/dart_api_dl.c
@@ -47,4 +69,9 @@ endif()
 if(ANDROID)
   # Support Android 15 16k page size.
   target_link_options(bluez_obex_native PRIVATE "-Wl,-z,max-page-size=16384")
+endif()
+
+include(CTest)
+if(BUILD_TESTING)
+  add_subdirectory(test)
 endif()
