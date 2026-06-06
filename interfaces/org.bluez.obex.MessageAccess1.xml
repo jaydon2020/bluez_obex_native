@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<node>
+  <interface name="org.bluez.obex.MessageAccess1">
+    <method name="SetFolder">
+      <arg name="name" type="s" direction="in"/>
+    </method>
+    <method name="ListFolders">
+      <arg name="filter" type="a{sv}" direction="in"/>
+      <arg name="folders" type="aa{sv}" direction="out"/>
+    </method>
+    <method name="ListFilterFields">
+      <arg name="fields" type="as" direction="out"/>
+    </method>
+    <method name="ListMessages">
+      <arg name="folder" type="s" direction="in"/>
+      <arg name="filter" type="a{sv}" direction="in"/>
+      <arg name="messages" type="a(oa{sv})" direction="out"/>
+    </method>
+    <method name="UpdateInbox"/>
+    <method name="PushMessage">
+      <arg name="sourcefile" type="s" direction="in"/>
+      <arg name="folder" type="s" direction="in"/>
+      <arg name="args" type="a{sv}" direction="in"/>
+      <arg name="transfer" type="o" direction="out"/>
+      <arg name="properties" type="a{sv}" direction="out"/>
+    </method>
+  </interface>
+</node>

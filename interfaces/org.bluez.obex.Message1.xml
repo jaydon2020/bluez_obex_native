@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<node>
+  <interface name="org.bluez.obex.Message1">
+    <method name="Get">
+      <arg name="targetfile" type="s" direction="in"/>
+      <arg name="attachment" type="b" direction="in"/>
+      <arg name="transfer" type="o" direction="out"/>
+      <arg name="properties" type="a{sv}" direction="out"/>
+    </method>
+    <property name="Folder" type="s" access="read"/>
+    <property name="Subject" type="s" access="read"/>
+    <property name="Timestamp" type="s" access="read"/>
+    <property name="Sender" type="s" access="read"/>
+    <property name="SenderAddress" type="s" access="read"/>
+    <property name="ReplyTo" type="s" access="read"/>
+    <property name="Recipient" type="s" access="read"/>
+    <property name="RecipientAddress" type="s" access="read"/>
+    <property name="Type" type="s" access="read"/>
+    <property name="Size" type="t" access="read"/>
+    <property name="Status" type="s" access="read"/>
+    <property name="Priority" type="b" access="read"/>
+    <property name="Read" type="b" access="readwrite"/>
+    <property name="Deleted" type="b" access="write"/>
+    <property name="Sent" type="b" access="read"/>
+    <property name="Protected" type="b" access="read"/>
+  </interface>
+</node>
