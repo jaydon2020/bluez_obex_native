@@ -14,7 +14,7 @@ final session = await client.createSession(
   target: 'pbap',
 );
 
-await session.phonebook.select('telecom', 'pb');
+await session.phonebook.select('int', 'pb');
 final entries = await session.phonebook.list(filters: {'MaxCount': 50});
 final transfer = await session.phonebook.pullAll('/tmp/contacts.vcf');
 

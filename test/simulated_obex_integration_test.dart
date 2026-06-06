@@ -31,7 +31,7 @@ void main() {
       expect(objects.phonebooks, contains(session.objectPath));
 
       final phonebook = session.phonebook;
-      await phonebook.select('telecom', 'pb');
+      await phonebook.select('int', 'pb');
 
       final entries = await phonebook.list(filters: {'MaxCount': 1});
       expect(entries, hasLength(1));

@@ -29,8 +29,8 @@ Future<void> main(List<String> args) async {
     final session = await client.createSession(address, target: 'pbap');
     print('Session created: ${session.objectPath}');
 
-    print('Selecting telecom/pb phonebook...');
-    await session.phonebook.select('telecom', 'pb');
+    print('Selecting int/pb phonebook...');
+    await session.phonebook.select('int', 'pb');
 
     final size = await session.phonebook.getSize();
     print('Phonebook size: $size');

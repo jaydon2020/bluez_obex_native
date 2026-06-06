@@ -106,7 +106,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   Future<void> _syncContacts() async {
     final session = _requireSession();
     final phonebook = session.phonebook;
-    await phonebook.select('telecom', 'pb');
+    await phonebook.select('int', 'pb');
     final contacts = await phonebook.list(filters: {'MaxCount': 50});
     final targetFile = '${_workspace!.path}/contacts.vcf';
     await phonebook.pullAll(targetFile);
