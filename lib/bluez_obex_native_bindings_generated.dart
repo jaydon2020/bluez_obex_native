@@ -60,6 +60,138 @@ class BluezObexNativeBindings {
   late final _bluez_obex_client_destroy = _bluez_obex_client_destroyPtr
       .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
+  /// ── Session management ─────────────────────────────────────────────────────
+  int bluez_obex_client_create_session(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> destination,
+    ffi.Pointer<ffi.Char> target,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_client_create_session(
+      handle,
+      destination,
+      target,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_client_create_sessionPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_client_create_session');
+  late final _bluez_obex_client_create_session =
+      _bluez_obex_client_create_sessionPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  int bluez_obex_client_remove_session(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> session_path,
+  ) {
+    return _bluez_obex_client_remove_session(handle, session_path);
+  }
+
+  late final _bluez_obex_client_remove_sessionPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+        >
+      >('bluez_obex_client_remove_session');
+  late final _bluez_obex_client_remove_session =
+      _bluez_obex_client_remove_sessionPtr
+          .asFunction<
+            int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+          >();
+
+  int bluez_obex_session_get_properties(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> session_path,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_session_get_properties(
+      handle,
+      session_path,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_session_get_propertiesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_session_get_properties');
+  late final _bluez_obex_session_get_properties =
+      _bluez_obex_session_get_propertiesPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  int bluez_obex_session_get_capabilities(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> session_path,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_session_get_capabilities(
+      handle,
+      session_path,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_session_get_capabilitiesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_session_get_capabilities');
+  late final _bluez_obex_session_get_capabilities =
+      _bluez_obex_session_get_capabilitiesPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
   /// ── ObjectManager queries ──────────────────────────────────────────────────
   int bluez_obex_get_managed_objects(
     ffi.Pointer<ffi.Void> handle,
@@ -85,32 +217,669 @@ class BluezObexNativeBindings {
             int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Uint8>, int)
           >();
 
-  /// A very short-lived native function.
-  ///
-  /// For very short-lived functions, it is fine to call them on the main isolate.
-  /// They will block the Dart execution while running the native function, so
-  /// only do this for native functions which are guaranteed to be short-lived.
-  int sum(int a, int b) {
-    return _sum(a, b);
+  /// ── Phonebook Access Profile ───────────────────────────────────────────────
+  int bluez_obex_phonebook_get_properties(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_phonebook_get_properties(
+      handle,
+      phonebook_path,
+      out,
+      capacity,
+    );
   }
 
-  late final _sumPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Int, ffi.Int)>>('sum');
-  late final _sum = _sumPtr.asFunction<int Function(int, int)>();
+  late final _bluez_obex_phonebook_get_propertiesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_phonebook_get_properties');
+  late final _bluez_obex_phonebook_get_properties =
+      _bluez_obex_phonebook_get_propertiesPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
 
-  /// A longer lived native function, which occupies the thread calling it.
-  ///
-  /// Do not call these kind of native functions in the main isolate. They will
-  /// block Dart execution. This will cause dropped frames in Flutter applications.
-  /// Instead, call these native functions on a separate isolate.
-  int sum_long_running(int a, int b) {
-    return _sum_long_running(a, b);
+  int bluez_obex_phonebook_select(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+    ffi.Pointer<ffi.Char> location,
+    ffi.Pointer<ffi.Char> phonebook,
+  ) {
+    return _bluez_obex_phonebook_select(
+      handle,
+      phonebook_path,
+      location,
+      phonebook,
+    );
   }
 
-  late final _sum_long_runningPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Int, ffi.Int)>>(
-        'sum_long_running',
-      );
-  late final _sum_long_running = _sum_long_runningPtr
-      .asFunction<int Function(int, int)>();
+  late final _bluez_obex_phonebook_selectPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+          )
+        >
+      >('bluez_obex_phonebook_select');
+  late final _bluez_obex_phonebook_select = _bluez_obex_phonebook_selectPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Void>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+        )
+      >();
+
+  int bluez_obex_phonebook_pull_all(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+    ffi.Pointer<ffi.Char> target_file,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
+    int filter_count,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_phonebook_pull_all(
+      handle,
+      phonebook_path,
+      target_file,
+      filter_keys,
+      filter_values,
+      filter_count,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_phonebook_pull_allPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Int32,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_phonebook_pull_all');
+  late final _bluez_obex_phonebook_pull_all = _bluez_obex_phonebook_pull_allPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Void>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+        )
+      >();
+
+  int bluez_obex_phonebook_list(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
+    int filter_count,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_phonebook_list(
+      handle,
+      phonebook_path,
+      filter_keys,
+      filter_values,
+      filter_count,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_phonebook_listPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Int32,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_phonebook_list');
+  late final _bluez_obex_phonebook_list = _bluez_obex_phonebook_listPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Void>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+        )
+      >();
+
+  int bluez_obex_phonebook_search(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+    ffi.Pointer<ffi.Char> field,
+    ffi.Pointer<ffi.Char> value,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
+    int filter_count,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_phonebook_search(
+      handle,
+      phonebook_path,
+      field,
+      value,
+      filter_keys,
+      filter_values,
+      filter_count,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_phonebook_searchPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Int32,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_phonebook_search');
+  late final _bluez_obex_phonebook_search = _bluez_obex_phonebook_searchPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Void>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+        )
+      >();
+
+  int bluez_obex_phonebook_get_size(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+  ) {
+    return _bluez_obex_phonebook_get_size(handle, phonebook_path);
+  }
+
+  late final _bluez_obex_phonebook_get_sizePtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+        >
+      >('bluez_obex_phonebook_get_size');
+  late final _bluez_obex_phonebook_get_size = _bluez_obex_phonebook_get_sizePtr
+      .asFunction<int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)>();
+
+  int bluez_obex_phonebook_update_version(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+  ) {
+    return _bluez_obex_phonebook_update_version(handle, phonebook_path);
+  }
+
+  late final _bluez_obex_phonebook_update_versionPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+        >
+      >('bluez_obex_phonebook_update_version');
+  late final _bluez_obex_phonebook_update_version =
+      _bluez_obex_phonebook_update_versionPtr
+          .asFunction<
+            int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+          >();
+
+  int bluez_obex_phonebook_list_filter_fields(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_phonebook_list_filter_fields(
+      handle,
+      phonebook_path,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_phonebook_list_filter_fieldsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_phonebook_list_filter_fields');
+  late final _bluez_obex_phonebook_list_filter_fields =
+      _bluez_obex_phonebook_list_filter_fieldsPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  /// ── Message Access Profile ─────────────────────────────────────────────────
+  int bluez_obex_message_access_set_folder(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_access_path,
+    ffi.Pointer<ffi.Char> folder,
+  ) {
+    return _bluez_obex_message_access_set_folder(
+      handle,
+      message_access_path,
+      folder,
+    );
+  }
+
+  late final _bluez_obex_message_access_set_folderPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+          )
+        >
+      >('bluez_obex_message_access_set_folder');
+  late final _bluez_obex_message_access_set_folder =
+      _bluez_obex_message_access_set_folderPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+            )
+          >();
+
+  int bluez_obex_message_access_list_folders(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_access_path,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
+    int filter_count,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_message_access_list_folders(
+      handle,
+      message_access_path,
+      filter_keys,
+      filter_values,
+      filter_count,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_message_access_list_foldersPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Int32,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_message_access_list_folders');
+  late final _bluez_obex_message_access_list_folders =
+      _bluez_obex_message_access_list_foldersPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              int,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  int bluez_obex_message_access_list_filter_fields(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_access_path,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_message_access_list_filter_fields(
+      handle,
+      message_access_path,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_message_access_list_filter_fieldsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_message_access_list_filter_fields');
+  late final _bluez_obex_message_access_list_filter_fields =
+      _bluez_obex_message_access_list_filter_fieldsPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  int bluez_obex_message_access_list_messages(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_access_path,
+    ffi.Pointer<ffi.Char> folder,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
+    int filter_count,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_message_access_list_messages(
+      handle,
+      message_access_path,
+      folder,
+      filter_keys,
+      filter_values,
+      filter_count,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_message_access_list_messagesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Int32,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_message_access_list_messages');
+  late final _bluez_obex_message_access_list_messages =
+      _bluez_obex_message_access_list_messagesPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              int,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  int bluez_obex_message_access_update_inbox(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_access_path,
+  ) {
+    return _bluez_obex_message_access_update_inbox(handle, message_access_path);
+  }
+
+  late final _bluez_obex_message_access_update_inboxPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+        >
+      >('bluez_obex_message_access_update_inbox');
+  late final _bluez_obex_message_access_update_inbox =
+      _bluez_obex_message_access_update_inboxPtr
+          .asFunction<
+            int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+          >();
+
+  int bluez_obex_message_access_push_message(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_access_path,
+    ffi.Pointer<ffi.Char> source_file,
+    ffi.Pointer<ffi.Char> folder,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> arg_keys,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> arg_values,
+    int arg_count,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_message_access_push_message(
+      handle,
+      message_access_path,
+      source_file,
+      folder,
+      arg_keys,
+      arg_values,
+      arg_count,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_message_access_push_messagePtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Int32,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_message_access_push_message');
+  late final _bluez_obex_message_access_push_message =
+      _bluez_obex_message_access_push_messagePtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              int,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  int bluez_obex_message_get_properties(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_path,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_message_get_properties(
+      handle,
+      message_path,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_message_get_propertiesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_message_get_properties');
+  late final _bluez_obex_message_get_properties =
+      _bluez_obex_message_get_propertiesPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  int bluez_obex_message_get(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_path,
+    ffi.Pointer<ffi.Char> target_file,
+    int attachment,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_message_get(
+      handle,
+      message_path,
+      target_file,
+      attachment,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_message_getPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_message_get');
+  late final _bluez_obex_message_get = _bluez_obex_message_getPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Void>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+        )
+      >();
+
+  int bluez_obex_message_set_read(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_path,
+    int read,
+  ) {
+    return _bluez_obex_message_set_read(handle, message_path, read);
+  }
+
+  late final _bluez_obex_message_set_readPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int,
+          )
+        >
+      >('bluez_obex_message_set_read');
+  late final _bluez_obex_message_set_read = _bluez_obex_message_set_readPtr
+      .asFunction<
+        int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, int)
+      >();
+
+  int bluez_obex_message_set_deleted(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_path,
+    int deleted,
+  ) {
+    return _bluez_obex_message_set_deleted(handle, message_path, deleted);
+  }
+
+  late final _bluez_obex_message_set_deletedPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int,
+          )
+        >
+      >('bluez_obex_message_set_deleted');
+  late final _bluez_obex_message_set_deleted =
+      _bluez_obex_message_set_deletedPtr
+          .asFunction<
+            int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, int)
+          >();
 }

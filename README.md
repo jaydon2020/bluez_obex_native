@@ -1,6 +1,7 @@
 # bluez_obex_native
 
-A new Flutter FFI plugin project.
+Native Dart bindings for BlueZ OBEX sessions, transfers, phonebook access, and
+message access.
 
 ## Getting Started
 
@@ -77,16 +78,27 @@ Regenerate the bindings by running `dart run ffigen --config ffigen.yaml`.
 
 ## Invoking native code
 
-Very short-running native functions can be directly invoked from any isolate.
-For example, see `sum` in `lib/bluez_obex_native.dart`.
+Use `BlueZObexClient` as the entry point. It initializes the Dart Native DL API,
+opens a session bus connection, starts the native D-Bus event loop, and exposes
+ObjectManager updates through `events`.
 
-Longer-running functions should be invoked on a helper isolate to avoid
-dropping frames in Flutter applications.
-For example, see `sumAsync` in `lib/bluez_obex_native.dart`.
+```dart
+final client = await BlueZObexClient.connect();
+final objects = await client.getManagedObjects();
+
+final session = await client.createSession(
+  'AA:BB:CC:DD:EE:FF',
+  target: 'pbap',
+);
+final phonebook = session.phonebook;
+await phonebook.select('int', 'pb');
+final entries = await phonebook.list(filters: {'MaxCount': 50});
+
+await client.dispose();
+```
 
 ## Flutter help
 
 For help getting started with Flutter, view our
 [online documentation](https://docs.flutter.dev), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
-
