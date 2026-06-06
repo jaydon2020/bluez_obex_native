@@ -1,7 +1,10 @@
 name: bluez_obex_native
-description: "A new Flutter FFI plugin project."
+description: Native Dart bindings for BlueZ OBEX sessions, transfers, phonebook access, and message access.
 version: 0.0.1
-homepage:
+homepage: https://github.com/jaydon2020/bluez_obex_native
+repository: https://github.com/jaydon2020/bluez_obex_native
+issue_tracker: https://github.com/jaydon2020/bluez_obex_native/issues
+documentation: https://pub.dev/documentation/bluez_obex_native/latest/
 
 environment:
   sdk: ^3.11.5

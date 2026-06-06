@@ -16,6 +16,7 @@ add_subdirectory(third_party/sdbus-cpp EXCLUDE_FROM_ALL)
 
 add_library(bluez_obex_native SHARED
   src/bluez_obex_native.c
+  src/dart_api_dl.c
 )
 
 target_include_directories(bluez_obex_native
