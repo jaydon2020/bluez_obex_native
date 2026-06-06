@@ -1,4 +1,4 @@
-// codec.dart — GlazeCodec for decoding BlueZ Media native payloads.
+// codec.dart - GlazeCodec for decoding BlueZ OBEX native payloads.
 // Matches the binary encoding in glaze_meta.h (little-endian, length-prefixed).
 
 import 'dart:convert';
@@ -13,127 +13,133 @@ class GlazeCodec {
   static T decode<T>(Uint8List data, int offset) {
     final r = _Reader(data, offset);
 
-    if (T == BlueZMediaProperty) {
-      return _decodeMediaProperty(r) as T;
-    } else if (T == BlueZMediaPlayerProps) {
-      return _decodeMediaPlayerProps(r) as T;
-    } else if (T == BlueZMediaControlProps) {
-      return _decodeMediaControlProps(r) as T;
-    } else if (T == BlueZMediaTransportProps) {
-      return _decodeMediaTransportProps(r) as T;
-    } else if (T == BlueZMediaFolderProps) {
-      return _decodeMediaFolderProps(r) as T;
-    } else if (T == BlueZMediaItemProps) {
-      return _decodeMediaItemProps(r) as T;
-    } else if (T == BlueZMediaFolderItems) {
-      return _decodeMediaFolderItems(r) as T;
-    } else if (T == BlueZMediaAcquireResult) {
-      return _decodeMediaAcquireResult(r) as T;
-    } else if (T == BlueZMediaManagedObjects) {
-      return _decodeMediaManagedObjects(r) as T;
-    } else if (T == BlueZMediaObjectRemoved) {
-      return _decodeMediaObjectRemoved(r) as T;
+    if (T == BlueZObexProperty) {
+      return _decodeObexProperty(r) as T;
+    } else if (T == BlueZObexSessionProps) {
+      return _decodeObexSessionProps(r) as T;
+    } else if (T == BlueZObexTransferProps) {
+      return _decodeObexTransferProps(r) as T;
+    } else if (T == BlueZObexPhonebookProps) {
+      return _decodeObexPhonebookProps(r) as T;
+    } else if (T == BlueZObexPhonebookEntry) {
+      return _decodeObexPhonebookEntry(r) as T;
+    } else if (T == BlueZObexMessageFolder) {
+      return _decodeObexMessageFolder(r) as T;
+    } else if (T == BlueZObexMessageProps) {
+      return _decodeObexMessageProps(r) as T;
+    } else if (T == BlueZObexTransferResult) {
+      return _decodeObexTransferResult(r) as T;
+    } else if (T == BlueZObexManagedObjects) {
+      return _decodeObexManagedObjects(r) as T;
+    } else if (T == BlueZObexObjectRemoved) {
+      return _decodeObexObjectRemoved(r) as T;
+    } else if (T == BlueZObexError) {
+      return _decodeObexError(r) as T;
     }
     throw ArgumentError('Unknown type: $T');
   }
 
-  static BlueZMediaProperty _decodeMediaProperty(_Reader r) {
-    return BlueZMediaProperty(key: r.readString(), value: r.readString());
+  static BlueZObexProperty _decodeObexProperty(_Reader r) {
+    return BlueZObexProperty(key: r.readString(), value: r.readString());
   }
 
-  static BlueZMediaPlayerProps _decodeMediaPlayerProps(_Reader r) {
-    return BlueZMediaPlayerProps(
+  static BlueZObexSessionProps _decodeObexSessionProps(_Reader r) {
+    return BlueZObexSessionProps(
       objectPath: r.readString(),
-      equalizer: r.readString(),
-      repeat: r.readString(),
-      shuffle: r.readString(),
-      scan: r.readString(),
+      source: r.readString(),
+      destination: r.readString(),
+      channel: r.readUint8(),
+      target: r.readString(),
+      root: r.readString(),
+    );
+  }
+
+  static BlueZObexTransferProps _decodeObexTransferProps(_Reader r) {
+    return BlueZObexTransferProps(
+      objectPath: r.readString(),
       status: r.readString(),
-      position: r.readUint32(),
-      track: r.readMediaPropertyList(),
-      device: r.readString(),
+      session: r.readString(),
       name: r.readString(),
       type: r.readString(),
-      subtype: r.readString(),
-      browsable: r.readBool(),
-      searchable: r.readBool(),
-      playlist: r.readString(),
+      time: r.readUint64(),
+      size: r.readUint64(),
+      transferred: r.readUint64(),
+      filename: r.readString(),
     );
   }
 
-  static BlueZMediaControlProps _decodeMediaControlProps(_Reader r) {
-    return BlueZMediaControlProps(
+  static BlueZObexPhonebookProps _decodeObexPhonebookProps(_Reader r) {
+    return BlueZObexPhonebookProps(
       objectPath: r.readString(),
-      connected: r.readBool(),
-      player: r.readString(),
+      folder: r.readString(),
+      databaseIdentifier: r.readString(),
+      primaryCounter: r.readString(),
+      secondaryCounter: r.readString(),
+      fixedImageSize: r.readBool(),
     );
   }
 
-  static BlueZMediaTransportProps _decodeMediaTransportProps(_Reader r) {
-    return BlueZMediaTransportProps(
-      objectPath: r.readString(),
-      device: r.readString(),
-      uuid: r.readString(),
-      codec: r.readUint8(),
-      configuration: r.readByteList(),
-      state: r.readString(),
-      delay: r.readUint16(),
-      volume: r.readUint16(),
-      endpoint: r.readString(),
-    );
+  static BlueZObexPhonebookEntry _decodeObexPhonebookEntry(_Reader r) {
+    return BlueZObexPhonebookEntry(vcard: r.readString(), name: r.readString());
   }
 
-  static BlueZMediaFolderProps _decodeMediaFolderProps(_Reader r) {
-    return BlueZMediaFolderProps(
-      objectPath: r.readString(),
-      numberOfItems: r.readUint32(),
-      name: r.readString(),
-    );
+  static BlueZObexMessageFolder _decodeObexMessageFolder(_Reader r) {
+    return BlueZObexMessageFolder(name: r.readString());
   }
 
-  static BlueZMediaItemProps _decodeMediaItemProps(_Reader r) {
-    return BlueZMediaItemProps(
+  static BlueZObexMessageProps _decodeObexMessageProps(_Reader r) {
+    return BlueZObexMessageProps(
       objectPath: r.readString(),
-      player: r.readString(),
-      name: r.readString(),
+      folder: r.readString(),
+      subject: r.readString(),
+      timestamp: r.readString(),
+      sender: r.readString(),
+      senderAddress: r.readString(),
+      replyTo: r.readString(),
+      recipient: r.readString(),
+      recipientAddress: r.readString(),
       type: r.readString(),
-      folderType: r.readString(),
-      playable: r.readBool(),
-      metadata: r.readMediaPropertyList(),
+      size: r.readUint64(),
+      text: r.readBool(),
+      status: r.readString(),
+      attachmentSize: r.readUint64(),
+      priority: r.readBool(),
+      read: r.readBool(),
+      deleted: r.readBool(),
+      sent: r.readBool(),
+      protected: r.readBool(),
     );
   }
 
-  static BlueZMediaFolderItems _decodeMediaFolderItems(_Reader r) {
-    return BlueZMediaFolderItems(
-      objectPath: r.readString(),
-      items: r.readMediaItemList(),
+  static BlueZObexTransferResult _decodeObexTransferResult(_Reader r) {
+    return BlueZObexTransferResult(
+      transferPath: r.readString(),
+      properties: r.readObexPropertyList(),
     );
   }
 
-  static BlueZMediaAcquireResult _decodeMediaAcquireResult(_Reader r) {
-    return BlueZMediaAcquireResult(
-      transportPath: r.readString(),
-      fd: r.readUint64(),
-      readMtu: r.readUint16(),
-      writeMtu: r.readUint16(),
+  static BlueZObexManagedObjects _decodeObexManagedObjects(_Reader r) {
+    return BlueZObexManagedObjects(
+      sessions: r.readStringList(),
+      transfers: r.readStringList(),
+      phonebooks: r.readStringList(),
+      messageAccesses: r.readStringList(),
+      messages: r.readStringList(),
     );
   }
 
-  static BlueZMediaManagedObjects _decodeMediaManagedObjects(_Reader r) {
-    return BlueZMediaManagedObjects(
-      media: r.readStringList(),
-      players: r.readStringList(),
-      controls: r.readStringList(),
-      transports: r.readStringList(),
-      folders: r.readStringList(),
-      items: r.readStringList(),
-    );
-  }
-
-  static BlueZMediaObjectRemoved _decodeMediaObjectRemoved(_Reader r) {
-    return BlueZMediaObjectRemoved(
+  static BlueZObexObjectRemoved _decodeObexObjectRemoved(_Reader r) {
+    return BlueZObexObjectRemoved(
       objectPath: r.readString(),
       interfaceName: r.readString(),
+    );
+  }
+
+  static BlueZObexError _decodeObexError(_Reader r) {
+    return BlueZObexError(
+      objectPath: r.readString(),
+      name: r.readString(),
+      message: r.readString(),
     );
   }
 }
@@ -171,20 +177,6 @@ class _Reader {
     return v;
   }
 
-  int readUint16() {
-    _checkBounds(2);
-    final v = _data.getUint16(_offset, Endian.little);
-    _offset += 2;
-    return v;
-  }
-
-  int readUint32() {
-    _checkBounds(4);
-    final v = _data.getUint32(_offset, Endian.little);
-    _offset += 4;
-    return v;
-  }
-
   int readUint64() {
     _checkBounds(8);
     final v = _data.getUint64(_offset, Endian.little);
@@ -193,7 +185,7 @@ class _Reader {
   }
 
   String readString() {
-    final len = readUint32();
+    final len = _readUint32();
     _checkBounds(len);
     final bytes = Uint8List.view(
       _data.buffer,
@@ -204,42 +196,23 @@ class _Reader {
     return utf8.decode(bytes);
   }
 
-  List<int> readByteList() {
-    final count = readUint32();
-    _checkBounds(count);
-    final bytes = List<int>.from(
-      Uint8List.view(_data.buffer, _data.offsetInBytes + _offset, count),
-    );
-    _offset += count;
-    return bytes;
-  }
-
-  List<BlueZMediaProperty> readMediaPropertyList() {
-    final count = readUint32();
+  List<BlueZObexProperty> readObexPropertyList() {
+    final count = _readUint32();
     return List.generate(
       count,
-      (_) => BlueZMediaProperty(key: readString(), value: readString()),
-    );
-  }
-
-  List<BlueZMediaItemProps> readMediaItemList() {
-    final count = readUint32();
-    return List.generate(
-      count,
-      (_) => BlueZMediaItemProps(
-        objectPath: readString(),
-        player: readString(),
-        name: readString(),
-        type: readString(),
-        folderType: readString(),
-        playable: readBool(),
-        metadata: readMediaPropertyList(),
-      ),
+      (_) => BlueZObexProperty(key: readString(), value: readString()),
     );
   }
 
   List<String> readStringList() {
-    final count = readUint32();
+    final count = _readUint32();
     return List.generate(count, (_) => readString());
+  }
+
+  int _readUint32() {
+    _checkBounds(4);
+    final v = _data.getUint32(_offset, Endian.little);
+    _offset += 4;
+    return v;
   }
 }

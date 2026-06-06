@@ -1,4 +1,4 @@
-add_executable(test_media_types test_media_types.cpp)
-target_link_libraries(test_media_types PRIVATE bluez_obex_native_core)
+add_executable(test_obex_types test_obex_types.cpp)
+target_link_libraries(test_obex_types PRIVATE bluez_obex_native_core)
 
-add_test(NAME test_media_types COMMAND test_media_types)
+add_test(NAME test_obex_types COMMAND test_obex_types)

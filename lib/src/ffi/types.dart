@@ -1,175 +1,185 @@
-// types.dart — Dart-side struct mirrors for glaze-decoded BlueZ Media payloads.
-// These match the C++ structs in native/include/bluez_media_types.h.
+// types.dart - Dart-side mirrors for glaze-decoded BlueZ OBEX payloads.
+// These match native/include/bluez_obex_types.h.
 
 /// A string representation of a D-Bus variant property.
-class BlueZMediaProperty {
+class BlueZObexProperty {
   final String key;
   final String value;
 
-  const BlueZMediaProperty({required this.key, required this.value});
+  const BlueZObexProperty({required this.key, required this.value});
 }
 
-/// MediaPlayer1 properties from BlueZ.
-class BlueZMediaPlayerProps {
+/// org.bluez.obex.Session1 properties.
+class BlueZObexSessionProps {
   final String objectPath;
-  final String equalizer;
-  final String repeat;
-  final String shuffle;
-  final String scan;
+  final String source;
+  final String destination;
+  final int channel;
+  final String target;
+  final String root;
+
+  const BlueZObexSessionProps({
+    required this.objectPath,
+    this.source = '',
+    this.destination = '',
+    this.channel = 0,
+    this.target = '',
+    this.root = '',
+  });
+}
+
+/// org.bluez.obex.Transfer1 properties.
+class BlueZObexTransferProps {
+  final String objectPath;
   final String status;
-  final int position;
-  final List<BlueZMediaProperty> track;
-  final String device;
+  final String session;
   final String name;
   final String type;
-  final String subtype;
-  final bool browsable;
-  final bool searchable;
-  final String playlist;
+  final int time;
+  final int size;
+  final int transferred;
+  final String filename;
 
-  const BlueZMediaPlayerProps({
+  const BlueZObexTransferProps({
     required this.objectPath,
-    this.equalizer = '',
-    this.repeat = '',
-    this.shuffle = '',
-    this.scan = '',
     this.status = '',
-    this.position = 0,
-    this.track = const [],
-    this.device = '',
+    this.session = '',
     this.name = '',
     this.type = '',
-    this.subtype = '',
-    this.browsable = false,
-    this.searchable = false,
-    this.playlist = '',
+    this.time = 0,
+    this.size = 0,
+    this.transferred = 0,
+    this.filename = '',
   });
 }
 
-/// MediaControl1 properties from BlueZ.
-class BlueZMediaControlProps {
+/// org.bluez.obex.PhonebookAccess1 properties.
+class BlueZObexPhonebookProps {
   final String objectPath;
-  final bool connected;
-  final String player;
+  final String folder;
+  final String databaseIdentifier;
+  final String primaryCounter;
+  final String secondaryCounter;
+  final bool fixedImageSize;
 
-  const BlueZMediaControlProps({
+  const BlueZObexPhonebookProps({
     required this.objectPath,
-    this.connected = false,
-    this.player = '',
+    this.folder = '',
+    this.databaseIdentifier = '',
+    this.primaryCounter = '',
+    this.secondaryCounter = '',
+    this.fixedImageSize = false,
   });
 }
 
-/// MediaTransport1 properties from BlueZ.
-class BlueZMediaTransportProps {
-  final String objectPath;
-  final String device;
-  final String uuid;
-  final int codec;
-  final List<int> configuration;
-  final String state;
-  final int delay;
-  final int volume;
-  final String endpoint;
-
-  const BlueZMediaTransportProps({
-    required this.objectPath,
-    this.device = '',
-    this.uuid = '',
-    this.codec = 0,
-    this.configuration = const [],
-    this.state = '',
-    this.delay = 0,
-    this.volume = 0,
-    this.endpoint = '',
-  });
-}
-
-/// MediaFolder1 properties from BlueZ.
-class BlueZMediaFolderProps {
-  final String objectPath;
-  final int numberOfItems;
+/// PhonebookAccess1 List/Search entry.
+class BlueZObexPhonebookEntry {
+  final String vcard;
   final String name;
 
-  const BlueZMediaFolderProps({
-    required this.objectPath,
-    this.numberOfItems = 0,
-    this.name = '',
-  });
+  const BlueZObexPhonebookEntry({required this.vcard, required this.name});
 }
 
-/// MediaItem1 properties from BlueZ.
-class BlueZMediaItemProps {
-  final String objectPath;
-  final String player;
+/// MessageAccess1 ListFolders entry.
+class BlueZObexMessageFolder {
   final String name;
+
+  const BlueZObexMessageFolder({required this.name});
+}
+
+/// org.bluez.obex.Message1 properties and MessageAccess1 ListMessages entries.
+class BlueZObexMessageProps {
+  final String objectPath;
+  final String folder;
+  final String subject;
+  final String timestamp;
+  final String sender;
+  final String senderAddress;
+  final String replyTo;
+  final String recipient;
+  final String recipientAddress;
   final String type;
-  final String folderType;
-  final bool playable;
-  final List<BlueZMediaProperty> metadata;
+  final int size;
+  final bool text;
+  final String status;
+  final int attachmentSize;
+  final bool priority;
+  final bool read;
+  final bool deleted;
+  final bool sent;
+  final bool protected;
 
-  const BlueZMediaItemProps({
+  const BlueZObexMessageProps({
     required this.objectPath,
-    this.player = '',
-    this.name = '',
+    this.folder = '',
+    this.subject = '',
+    this.timestamp = '',
+    this.sender = '',
+    this.senderAddress = '',
+    this.replyTo = '',
+    this.recipient = '',
+    this.recipientAddress = '',
     this.type = '',
-    this.folderType = '',
-    this.playable = false,
-    this.metadata = const [],
+    this.size = 0,
+    this.text = false,
+    this.status = '',
+    this.attachmentSize = 0,
+    this.priority = false,
+    this.read = false,
+    this.deleted = false,
+    this.sent = false,
+    this.protected = false,
   });
 }
 
-/// MediaFolder1.ListItems result from BlueZ.
-class BlueZMediaFolderItems {
-  final String objectPath;
-  final List<BlueZMediaItemProps> items;
+/// Result from OBEX methods returning object, dict.
+class BlueZObexTransferResult {
+  final String transferPath;
+  final List<BlueZObexProperty> properties;
 
-  const BlueZMediaFolderItems({
-    required this.objectPath,
-    this.items = const [],
-  });
-}
-
-/// Result from MediaTransport1.Acquire / TryAcquire.
-class BlueZMediaAcquireResult {
-  final String transportPath;
-  final int fd;
-  final int readMtu;
-  final int writeMtu;
-
-  const BlueZMediaAcquireResult({
-    required this.transportPath,
-    required this.fd,
-    required this.readMtu,
-    required this.writeMtu,
+  const BlueZObexTransferResult({
+    required this.transferPath,
+    this.properties = const [],
   });
 }
 
 /// Result of ObjectManager queries.
-class BlueZMediaManagedObjects {
-  final List<String> media;
-  final List<String> players;
-  final List<String> controls;
-  final List<String> transports;
-  final List<String> folders;
-  final List<String> items;
+class BlueZObexManagedObjects {
+  final List<String> sessions;
+  final List<String> transfers;
+  final List<String> phonebooks;
+  final List<String> messageAccesses;
+  final List<String> messages;
 
-  const BlueZMediaManagedObjects({
-    this.media = const [],
-    this.players = const [],
-    this.controls = const [],
-    this.transports = const [],
-    this.folders = const [],
-    this.items = const [],
+  const BlueZObexManagedObjects({
+    this.sessions = const [],
+    this.transfers = const [],
+    this.phonebooks = const [],
+    this.messageAccesses = const [],
+    this.messages = const [],
   });
 }
 
-/// A media interface removed from the BlueZ object tree.
-class BlueZMediaObjectRemoved {
+/// An OBEX interface removed from the BlueZ object tree.
+class BlueZObexObjectRemoved {
   final String objectPath;
   final String interfaceName;
 
-  const BlueZMediaObjectRemoved({
+  const BlueZObexObjectRemoved({
     required this.objectPath,
     required this.interfaceName,
+  });
+}
+
+/// Native or D-Bus error payload.
+class BlueZObexError {
+  final String objectPath;
+  final String name;
+  final String message;
+
+  const BlueZObexError({
+    required this.objectPath,
+    required this.name,
+    required this.message,
   });
 }

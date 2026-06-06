@@ -21,11 +21,6 @@ void _writeUint8(BytesBuilder b, int v) {
   b.addByte(v);
 }
 
-void _writeUint16(BytesBuilder b, int v) {
-  final d = ByteData(2)..setUint16(0, v, Endian.little);
-  b.add(d.buffer.asUint8List());
-}
-
 void _writeUint32(BytesBuilder b, int v) {
   final d = ByteData(4)..setUint32(0, v, Endian.little);
   b.add(d.buffer.asUint8List());
@@ -36,12 +31,7 @@ void _writeUint64(BytesBuilder b, int v) {
   b.add(d.buffer.asUint8List());
 }
 
-void _writeByteList(BytesBuilder b, List<int> bytes) {
-  _writeUint32(b, bytes.length);
-  b.add(bytes);
-}
-
-void _writeMediaProperties(BytesBuilder b, Map<String, String> properties) {
+void _writeProperties(BytesBuilder b, Map<String, String> properties) {
   _writeUint32(b, properties.length);
   for (final entry in properties.entries) {
     _writeString(b, entry.key);
@@ -49,250 +39,244 @@ void _writeMediaProperties(BytesBuilder b, Map<String, String> properties) {
   }
 }
 
-void _writeMediaItem(
-  BytesBuilder b, {
-  required String objectPath,
-  required String player,
-  required String name,
-  required String type,
-  required String folderType,
-  required bool playable,
-  required Map<String, String> metadata,
-}) {
-  _writeString(b, objectPath);
-  _writeString(b, player);
-  _writeString(b, name);
-  _writeString(b, type);
-  _writeString(b, folderType);
-  _writeBool(b, playable);
-  _writeMediaProperties(b, metadata);
+void _writeStringList(BytesBuilder b, List<String> values) {
+  _writeUint32(b, values.length);
+  for (final value in values) {
+    _writeString(b, value);
+  }
 }
 
 void main() {
   group('GlazeCodec', () {
-    test('decodes BlueZMediaProperty', () {
+    test('decodes BlueZObexProperty', () {
       final b = BytesBuilder();
-      _writeString(b, 'Title');
-      _writeString(b, 'Blue Train');
+      _writeString(b, 'Status');
+      _writeString(b, 'active');
 
-      final data = Uint8List.fromList(b.toBytes());
-      final prop = GlazeCodec.decode<BlueZMediaProperty>(data, 0);
+      final prop = GlazeCodec.decode<BlueZObexProperty>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
 
-      expect(prop.key, 'Title');
-      expect(prop.value, 'Blue Train');
+      expect(prop.key, 'Status');
+      expect(prop.value, 'active');
     });
 
-    test('decodes BlueZMediaPlayerProps', () {
+    test('decodes BlueZObexSessionProps', () {
       final b = BytesBuilder();
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0');
-      _writeString(b, 'off'); // equalizer
-      _writeString(b, 'singletrack'); // repeat
-      _writeString(b, 'alltracks'); // shuffle
-      _writeString(b, 'alltracks'); // scan
-      _writeString(b, 'playing'); // status
-      _writeUint32(b, 42000); // position
-      _writeMediaProperties(b, {'Title': 'Blue Train', 'Artist': 'Coltrane'});
-      _writeString(b, '/org/bluez/hci0/dev_AA');
-      _writeString(b, 'Media Player');
-      _writeString(b, 'audio');
-      _writeString(b, 'player');
+      _writeString(b, '/org/bluez/obex/client/session0');
+      _writeString(b, '00:11:22:33:44:55');
+      _writeString(b, 'AA:BB:CC:DD:EE:FF');
+      _writeUint8(b, 12);
+      _writeString(b, 'pbap');
+      _writeString(b, '/telecom');
+
+      final props = GlazeCodec.decode<BlueZObexSessionProps>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(props.objectPath, '/org/bluez/obex/client/session0');
+      expect(props.source, '00:11:22:33:44:55');
+      expect(props.destination, 'AA:BB:CC:DD:EE:FF');
+      expect(props.channel, 12);
+      expect(props.target, 'pbap');
+      expect(props.root, '/telecom');
+    });
+
+    test('decodes BlueZObexTransferProps', () {
+      final b = BytesBuilder();
+      _writeString(b, '/org/bluez/obex/client/session0/transfer0');
+      _writeString(b, 'active');
+      _writeString(b, '/org/bluez/obex/client/session0');
+      _writeString(b, 'contacts.vcf');
+      _writeString(b, 'text/x-vcard');
+      _writeUint64(b, 1710000000);
+      _writeUint64(b, 4096);
+      _writeUint64(b, 1024);
+      _writeString(b, '/tmp/contacts.vcf');
+
+      final props = GlazeCodec.decode<BlueZObexTransferProps>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(props.objectPath, '/org/bluez/obex/client/session0/transfer0');
+      expect(props.status, 'active');
+      expect(props.session, '/org/bluez/obex/client/session0');
+      expect(props.name, 'contacts.vcf');
+      expect(props.type, 'text/x-vcard');
+      expect(props.time, 1710000000);
+      expect(props.size, 4096);
+      expect(props.transferred, 1024);
+      expect(props.filename, '/tmp/contacts.vcf');
+    });
+
+    test('decodes BlueZObexPhonebookProps', () {
+      final b = BytesBuilder();
+      _writeString(b, '/org/bluez/obex/client/session0');
+      _writeString(b, 'telecom/pb');
+      _writeString(b, 'A1A2A3A4B1B2C1C2D1D2E1E2E3E4E5E6');
+      _writeString(b, '00000000000000000000000000000001');
+      _writeString(b, '00000000000000000000000000000002');
+      _writeBool(b, true);
+
+      final props = GlazeCodec.decode<BlueZObexPhonebookProps>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(props.objectPath, '/org/bluez/obex/client/session0');
+      expect(props.folder, 'telecom/pb');
+      expect(props.databaseIdentifier, 'A1A2A3A4B1B2C1C2D1D2E1E2E3E4E5E6');
+      expect(props.primaryCounter, '00000000000000000000000000000001');
+      expect(props.secondaryCounter, '00000000000000000000000000000002');
+      expect(props.fixedImageSize, true);
+    });
+
+    test('decodes BlueZObexPhonebookEntry', () {
+      final b = BytesBuilder();
+      _writeString(b, '1.vcf');
+      _writeString(b, 'Ada Lovelace');
+
+      final entry = GlazeCodec.decode<BlueZObexPhonebookEntry>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(entry.vcard, '1.vcf');
+      expect(entry.name, 'Ada Lovelace');
+    });
+
+    test('decodes BlueZObexMessageFolder', () {
+      final b = BytesBuilder();
+      _writeString(b, 'inbox');
+
+      final folder = GlazeCodec.decode<BlueZObexMessageFolder>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(folder.name, 'inbox');
+    });
+
+    test('decodes BlueZObexMessageProps', () {
+      final b = BytesBuilder();
+      _writeString(b, '/org/bluez/obex/client/session0/message0');
+      _writeString(b, 'telecom/msg/inbox');
+      _writeString(b, 'Status');
+      _writeString(b, '20260606T123456');
+      _writeString(b, 'Ada');
+      _writeString(b, '+10000000000');
+      _writeString(b, 'ada@example.com');
+      _writeString(b, 'Grace');
+      _writeString(b, '+19999999999');
+      _writeString(b, 'sms-gsm');
+      _writeUint64(b, 160);
+      _writeBool(b, true);
+      _writeString(b, 'complete');
+      _writeUint64(b, 0);
       _writeBool(b, true);
       _writeBool(b, false);
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0/playlist');
-
-      final data = Uint8List.fromList(b.toBytes());
-      final props = GlazeCodec.decode<BlueZMediaPlayerProps>(data, 0);
-
-      expect(props.objectPath, '/org/bluez/hci0/dev_AA/player0');
-      expect(props.repeat, 'singletrack');
-      expect(props.shuffle, 'alltracks');
-      expect(props.status, 'playing');
-      expect(props.position, 42000);
-      expect(props.track.length, 2);
-      expect(props.track[0].key, 'Title');
-      expect(props.track[0].value, 'Blue Train');
-      expect(props.track[1].key, 'Artist');
-      expect(props.track[1].value, 'Coltrane');
-      expect(props.device, '/org/bluez/hci0/dev_AA');
-      expect(props.browsable, true);
-      expect(props.searchable, false);
-      expect(props.playlist, '/org/bluez/hci0/dev_AA/player0/playlist');
-    });
-
-    test('decodes BlueZMediaControlProps', () {
-      final b = BytesBuilder();
-      _writeString(b, '/org/bluez/hci0/dev_AA');
+      _writeBool(b, false);
+      _writeBool(b, false);
       _writeBool(b, true);
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0');
 
-      final data = Uint8List.fromList(b.toBytes());
-      final props = GlazeCodec.decode<BlueZMediaControlProps>(data, 0);
-
-      expect(props.objectPath, '/org/bluez/hci0/dev_AA');
-      expect(props.connected, true);
-      expect(props.player, '/org/bluez/hci0/dev_AA/player0');
-    });
-
-    test('decodes BlueZMediaTransportProps', () {
-      final b = BytesBuilder();
-      _writeString(b, '/org/bluez/hci0/dev_AA/fd0');
-      _writeString(b, '/org/bluez/hci0/dev_AA');
-      _writeString(b, '0000110b-0000-1000-8000-00805f9b34fb');
-      _writeUint8(b, 0x00);
-      _writeByteList(b, [0x21, 0x15]);
-      _writeString(b, 'active');
-      _writeUint16(b, 120);
-      _writeUint16(b, 96);
-      _writeString(b, '/bluez_media/endpoint/a2dp_sink');
-
-      final data = Uint8List.fromList(b.toBytes());
-      final props = GlazeCodec.decode<BlueZMediaTransportProps>(data, 0);
-
-      expect(props.objectPath, '/org/bluez/hci0/dev_AA/fd0');
-      expect(props.device, '/org/bluez/hci0/dev_AA');
-      expect(props.codec, 0);
-      expect(props.configuration, [0x21, 0x15]);
-      expect(props.state, 'active');
-      expect(props.delay, 120);
-      expect(props.volume, 96);
-      expect(props.endpoint, '/bluez_media/endpoint/a2dp_sink');
-    });
-
-    test('decodes BlueZMediaFolderProps', () {
-      final b = BytesBuilder();
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0/folder0');
-      _writeUint32(b, 23);
-      _writeString(b, 'Albums');
-
-      final data = Uint8List.fromList(b.toBytes());
-      final props = GlazeCodec.decode<BlueZMediaFolderProps>(data, 0);
-
-      expect(props.objectPath, '/org/bluez/hci0/dev_AA/player0/folder0');
-      expect(props.numberOfItems, 23);
-      expect(props.name, 'Albums');
-    });
-
-    test('decodes BlueZMediaItemProps', () {
-      final b = BytesBuilder();
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0/item0');
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0');
-      _writeString(b, 'Blue Train');
-      _writeString(b, 'audio');
-      _writeString(b, 'album');
-      _writeBool(b, true);
-      _writeMediaProperties(b, {'Album': 'Blue Train', 'Genre': 'Jazz'});
-
-      final data = Uint8List.fromList(b.toBytes());
-      final props = GlazeCodec.decode<BlueZMediaItemProps>(data, 0);
-
-      expect(props.objectPath, '/org/bluez/hci0/dev_AA/player0/item0');
-      expect(props.player, '/org/bluez/hci0/dev_AA/player0');
-      expect(props.name, 'Blue Train');
-      expect(props.type, 'audio');
-      expect(props.folderType, 'album');
-      expect(props.playable, true);
-      expect(props.metadata.length, 2);
-      expect(props.metadata[0].key, 'Album');
-      expect(props.metadata[1].value, 'Jazz');
-    });
-
-    test('decodes BlueZMediaFolderItems', () {
-      final b = BytesBuilder();
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0');
-      _writeUint32(b, 2);
-      _writeMediaItem(
-        b,
-        objectPath: '/org/bluez/hci0/dev_AA/player0/item0',
-        player: '/org/bluez/hci0/dev_AA/player0',
-        name: 'Blue Train',
-        type: 'audio',
-        folderType: '',
-        playable: true,
-        metadata: {'Title': 'Blue Train'},
-      );
-      _writeMediaItem(
-        b,
-        objectPath: '/org/bluez/hci0/dev_AA/player0/folder0',
-        player: '/org/bluez/hci0/dev_AA/player0',
-        name: 'Albums',
-        type: 'folder',
-        folderType: 'album',
-        playable: false,
-        metadata: {},
-      );
-
-      final data = Uint8List.fromList(b.toBytes());
-      final result = GlazeCodec.decode<BlueZMediaFolderItems>(data, 0);
-
-      expect(result.objectPath, '/org/bluez/hci0/dev_AA/player0');
-      expect(result.items.length, 2);
-      expect(result.items[0].name, 'Blue Train');
-      expect(result.items[0].playable, true);
-      expect(result.items[0].metadata.single.value, 'Blue Train');
-      expect(result.items[1].type, 'folder');
-      expect(result.items[1].folderType, 'album');
-    });
-
-    test('decodes BlueZMediaAcquireResult', () {
-      final b = BytesBuilder();
-      _writeString(b, '/org/bluez/hci0/dev_AA/fd0');
-      _writeUint64(b, 42);
-      _writeUint16(b, 672);
-      _writeUint16(b, 672);
-
-      final data = Uint8List.fromList(b.toBytes());
-      final result = GlazeCodec.decode<BlueZMediaAcquireResult>(data, 0);
-
-      expect(result.transportPath, '/org/bluez/hci0/dev_AA/fd0');
-      expect(result.fd, 42);
-      expect(result.readMtu, 672);
-      expect(result.writeMtu, 672);
-    });
-
-    test('decodes BlueZMediaManagedObjects', () {
-      final b = BytesBuilder();
-      _writeUint32(b, 1);
-      _writeString(b, '/org/bluez/hci0');
-      _writeUint32(b, 1);
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0');
-      _writeUint32(b, 1);
-      _writeString(b, '/org/bluez/hci0/dev_AA');
-      _writeUint32(b, 2);
-      _writeString(b, '/org/bluez/hci0/dev_AA/sep1/fd0');
-      _writeString(b, '/org/bluez/hci0/dev_BB/sep2/fd0');
-      _writeUint32(b, 1);
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0');
-      _writeUint32(b, 1);
-      _writeString(b, '/org/bluez/hci0/dev_AA/player0/item0');
-
-      final result = GlazeCodec.decode<BlueZMediaManagedObjects>(
+      final props = GlazeCodec.decode<BlueZObexMessageProps>(
         Uint8List.fromList(b.toBytes()),
         0,
       );
 
-      expect(result.media, ['/org/bluez/hci0']);
-      expect(result.players, ['/org/bluez/hci0/dev_AA/player0']);
-      expect(result.controls, ['/org/bluez/hci0/dev_AA']);
-      expect(result.transports, [
-        '/org/bluez/hci0/dev_AA/sep1/fd0',
-        '/org/bluez/hci0/dev_BB/sep2/fd0',
-      ]);
-      expect(result.folders, ['/org/bluez/hci0/dev_AA/player0']);
-      expect(result.items, ['/org/bluez/hci0/dev_AA/player0/item0']);
+      expect(props.objectPath, '/org/bluez/obex/client/session0/message0');
+      expect(props.folder, 'telecom/msg/inbox');
+      expect(props.subject, 'Status');
+      expect(props.timestamp, '20260606T123456');
+      expect(props.sender, 'Ada');
+      expect(props.senderAddress, '+10000000000');
+      expect(props.replyTo, 'ada@example.com');
+      expect(props.recipient, 'Grace');
+      expect(props.recipientAddress, '+19999999999');
+      expect(props.type, 'sms-gsm');
+      expect(props.size, 160);
+      expect(props.text, true);
+      expect(props.status, 'complete');
+      expect(props.attachmentSize, 0);
+      expect(props.priority, true);
+      expect(props.read, false);
+      expect(props.deleted, false);
+      expect(props.sent, false);
+      expect(props.protected, true);
     });
 
-    test('decodes BlueZMediaObjectRemoved', () {
+    test('decodes BlueZObexTransferResult', () {
       final b = BytesBuilder();
-      _writeString(b, '/org/bluez/hci0/dev_AA/sep1/fd0');
-      _writeString(b, 'org.bluez.MediaTransport1');
+      _writeString(b, '/org/bluez/obex/client/session0/transfer0');
+      _writeProperties(b, {
+        'Status': 'queued',
+        'Filename': '/tmp/message.bmsg',
+      });
 
-      final result = GlazeCodec.decode<BlueZMediaObjectRemoved>(
+      final result = GlazeCodec.decode<BlueZObexTransferResult>(
         Uint8List.fromList(b.toBytes()),
         0,
       );
 
-      expect(result.objectPath, '/org/bluez/hci0/dev_AA/sep1/fd0');
-      expect(result.interfaceName, 'org.bluez.MediaTransport1');
+      expect(result.transferPath, '/org/bluez/obex/client/session0/transfer0');
+      expect(result.properties.length, 2);
+      expect(result.properties[0].key, 'Status');
+      expect(result.properties[0].value, 'queued');
+      expect(result.properties[1].key, 'Filename');
+      expect(result.properties[1].value, '/tmp/message.bmsg');
+    });
+
+    test('decodes BlueZObexManagedObjects', () {
+      final b = BytesBuilder();
+      _writeStringList(b, ['/org/bluez/obex/client/session0']);
+      _writeStringList(b, ['/org/bluez/obex/client/session0/transfer0']);
+      _writeStringList(b, ['/org/bluez/obex/client/session0']);
+      _writeStringList(b, ['/org/bluez/obex/client/session1']);
+      _writeStringList(b, ['/org/bluez/obex/client/session1/message0']);
+
+      final result = GlazeCodec.decode<BlueZObexManagedObjects>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(result.sessions, ['/org/bluez/obex/client/session0']);
+      expect(result.transfers, ['/org/bluez/obex/client/session0/transfer0']);
+      expect(result.phonebooks, ['/org/bluez/obex/client/session0']);
+      expect(result.messageAccesses, ['/org/bluez/obex/client/session1']);
+      expect(result.messages, ['/org/bluez/obex/client/session1/message0']);
+    });
+
+    test('decodes BlueZObexObjectRemoved', () {
+      final b = BytesBuilder();
+      _writeString(b, '/org/bluez/obex/client/session0/transfer0');
+      _writeString(b, 'org.bluez.obex.Transfer1');
+
+      final result = GlazeCodec.decode<BlueZObexObjectRemoved>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(result.objectPath, '/org/bluez/obex/client/session0/transfer0');
+      expect(result.interfaceName, 'org.bluez.obex.Transfer1');
+    });
+
+    test('decodes BlueZObexError', () {
+      final b = BytesBuilder();
+      _writeString(b, '/org/bluez/obex/client/session0');
+      _writeString(b, 'org.bluez.obex.Error.Failed');
+      _writeString(b, 'Transfer failed');
+
+      final error = GlazeCodec.decode<BlueZObexError>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(error.objectPath, '/org/bluez/obex/client/session0');
+      expect(error.name, 'org.bluez.obex.Error.Failed');
+      expect(error.message, 'Transfer failed');
     });
 
     test('throws on unknown type', () {
@@ -303,7 +287,7 @@ void main() {
     test('throws on read overrun', () {
       final data = Uint8List.fromList([0x01, 0x02]);
       expect(
-        () => GlazeCodec.decode<BlueZMediaFolderProps>(data, 0),
+        () => GlazeCodec.decode<BlueZObexSessionProps>(data, 0),
         throwsRangeError,
       );
     });
