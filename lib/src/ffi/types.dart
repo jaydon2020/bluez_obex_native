@@ -80,11 +80,25 @@ class BlueZObexPhonebookEntry {
   const BlueZObexPhonebookEntry({required this.vcard, required this.name});
 }
 
+/// PhonebookAccess1 List/Search result.
+class BlueZObexPhonebookEntries {
+  final List<BlueZObexPhonebookEntry> entries;
+
+  const BlueZObexPhonebookEntries({this.entries = const []});
+}
+
 /// MessageAccess1 ListFolders entry.
 class BlueZObexMessageFolder {
   final String name;
 
   const BlueZObexMessageFolder({required this.name});
+}
+
+/// MessageAccess1 ListFolders result.
+class BlueZObexMessageFolders {
+  final List<BlueZObexMessageFolder> folders;
+
+  const BlueZObexMessageFolders({this.folders = const []});
 }
 
 /// org.bluez.obex.Message1 properties and MessageAccess1 ListMessages entries.
@@ -130,6 +144,20 @@ class BlueZObexMessageProps {
     this.sent = false,
     this.protected = false,
   });
+}
+
+/// MessageAccess1 ListMessages result.
+class BlueZObexMessages {
+  final List<BlueZObexMessageProps> messages;
+
+  const BlueZObexMessages({this.messages = const []});
+}
+
+/// PhonebookAccess1/MessageAccess1 ListFilterFields result.
+class BlueZObexFilterFields {
+  final List<String> fields;
+
+  const BlueZObexFilterFields({this.fields = const []});
 }
 
 /// Result from OBEX methods returning object, dict.

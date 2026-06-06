@@ -108,6 +108,15 @@ template <> struct glz::meta<BlueZObexPhonebookEntry> {
                       glz::field("name", &BlueZObexPhonebookEntry::name));
 };
 
+// PhonebookAccess1 List/Search result.
+struct BlueZObexPhonebookEntries {
+  std::vector<BlueZObexPhonebookEntry> entries;
+};
+template <> struct glz::meta<BlueZObexPhonebookEntries> {
+  static constexpr auto fields = std::make_tuple(
+      glz::field("entries", &BlueZObexPhonebookEntries::entries));
+};
+
 // MessageAccess1 ListFolders entry.
 struct BlueZObexMessageFolder {
   std::string name;
@@ -115,6 +124,15 @@ struct BlueZObexMessageFolder {
 template <> struct glz::meta<BlueZObexMessageFolder> {
   static constexpr auto fields =
       std::make_tuple(glz::field("name", &BlueZObexMessageFolder::name));
+};
+
+// MessageAccess1 ListFolders result.
+struct BlueZObexMessageFolders {
+  std::vector<BlueZObexMessageFolder> folders;
+};
+template <> struct glz::meta<BlueZObexMessageFolders> {
+  static constexpr auto fields =
+      std::make_tuple(glz::field("folders", &BlueZObexMessageFolders::folders));
 };
 
 // org.bluez.obex.Message1 properties and MessageAccess1 ListMessages entries.
@@ -160,6 +178,24 @@ template <> struct glz::meta<BlueZObexMessageProps> {
       glz::field("deleted", &BlueZObexMessageProps::deleted),
       glz::field("sent", &BlueZObexMessageProps::sent),
       glz::field("protected", &BlueZObexMessageProps::protected_));
+};
+
+// MessageAccess1 ListMessages result.
+struct BlueZObexMessages {
+  std::vector<BlueZObexMessageProps> messages;
+};
+template <> struct glz::meta<BlueZObexMessages> {
+  static constexpr auto fields =
+      std::make_tuple(glz::field("messages", &BlueZObexMessages::messages));
+};
+
+// PhonebookAccess1/MessageAccess1 ListFilterFields result.
+struct BlueZObexFilterFields {
+  std::vector<std::string> fields;
+};
+template <> struct glz::meta<BlueZObexFilterFields> {
+  static constexpr auto fields =
+      std::make_tuple(glz::field("fields", &BlueZObexFilterFields::fields));
 };
 
 // Result from OBEX methods returning object, dict.

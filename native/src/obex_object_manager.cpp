@@ -1,5 +1,7 @@
 #include "obex_object_manager.h"
 
+#include "obex_proxy_utils.h"
+
 #include <utility>
 
 namespace {
@@ -109,6 +111,8 @@ void ObexObjectManager::subscribe_properties(const std::string &object_path) {
              object_path](const std::string &interface_name,
                           const std::map<std::string, sdbus::Variant> &changed,
                           const std::vector<std::string> &invalidated) {
+        // Transfer1 Status and Transferred updates arrive through this signal;
+        // reload the full interface to keep Dart snapshots complete.
         (void)changed;
         (void)invalidated;
         if (is_obex_interface(interface_name)) {
@@ -166,30 +170,13 @@ void ObexObjectManager::post_error(const std::string &object_path,
 BlueZObexSessionProps
 ObexObjectManager::extract_session_props(const std::string &object_path,
                                          const PropertiesMap &props) {
-  BlueZObexSessionProps session;
-  session.objectPath = object_path;
-  session.source = get_prop<std::string>(props, "Source");
-  session.destination = get_prop<std::string>(props, "Destination");
-  session.channel = get_prop<uint8_t>(props, "Channel");
-  session.target = get_prop<std::string>(props, "Target");
-  session.root = get_prop<std::string>(props, "Root");
-  return session;
+  return obex::session_props_from_map(object_path, props);
 }
 
 BlueZObexTransferProps
 ObexObjectManager::extract_transfer_props(const std::string &object_path,
                                           const PropertiesMap &props) {
-  BlueZObexTransferProps transfer;
-  transfer.objectPath = object_path;
-  transfer.status = get_prop<std::string>(props, "Status");
-  transfer.session = get_prop<sdbus::ObjectPath>(props, "Session");
-  transfer.name = get_prop<std::string>(props, "Name");
-  transfer.type = get_prop<std::string>(props, "Type");
-  transfer.time = get_prop<uint64_t>(props, "Time");
-  transfer.size = get_prop<uint64_t>(props, "Size");
-  transfer.transferred = get_prop<uint64_t>(props, "Transferred");
-  transfer.filename = get_prop<std::string>(props, "Filename");
-  return transfer;
+  return obex::transfer_props_from_map(object_path, props);
 }
 
 template <typename T>

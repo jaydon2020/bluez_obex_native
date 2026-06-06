@@ -19,7 +19,11 @@ add_library(bluez_obex_native_core STATIC
   src/bluez_obex_native.c
   src/dart_api_dl.c
   src/obex_client.cpp
+  src/obex_message_proxy.cpp
   src/obex_object_manager.cpp
+  src/obex_phonebook_proxy.cpp
+  src/obex_proxy_utils.cpp
+  src/obex_session_proxy.cpp
 )
 
 target_include_directories(bluez_obex_native_core
@@ -44,7 +48,11 @@ add_library(bluez_obex_native SHARED
   src/bluez_obex_native.c
   src/dart_api_dl.c
   src/obex_client.cpp
+  src/obex_message_proxy.cpp
   src/obex_object_manager.cpp
+  src/obex_phonebook_proxy.cpp
+  src/obex_proxy_utils.cpp
+  src/obex_session_proxy.cpp
 )
 
 target_include_directories(bluez_obex_native

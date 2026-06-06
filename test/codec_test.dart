@@ -46,6 +46,46 @@ void _writeStringList(BytesBuilder b, List<String> values) {
   }
 }
 
+void _writePhonebookEntries(
+  BytesBuilder b,
+  List<(String vcard, String name)> entries,
+) {
+  _writeUint32(b, entries.length);
+  for (final entry in entries) {
+    _writeString(b, entry.$1);
+    _writeString(b, entry.$2);
+  }
+}
+
+void _writeMessageFolders(BytesBuilder b, List<String> folders) {
+  _writeUint32(b, folders.length);
+  for (final folder in folders) {
+    _writeString(b, folder);
+  }
+}
+
+void _writeMessageProps(BytesBuilder b) {
+  _writeString(b, '/org/bluez/obex/client/session0/message0');
+  _writeString(b, 'telecom/msg/inbox');
+  _writeString(b, 'Status');
+  _writeString(b, '20260606T123456');
+  _writeString(b, 'Ada');
+  _writeString(b, '+10000000000');
+  _writeString(b, 'ada@example.com');
+  _writeString(b, 'Grace');
+  _writeString(b, '+19999999999');
+  _writeString(b, 'sms-gsm');
+  _writeUint64(b, 160);
+  _writeBool(b, true);
+  _writeString(b, 'complete');
+  _writeUint64(b, 0);
+  _writeBool(b, true);
+  _writeBool(b, false);
+  _writeBool(b, false);
+  _writeBool(b, false);
+  _writeBool(b, true);
+}
+
 void main() {
   group('GlazeCodec', () {
     test('decodes BlueZObexProperty', () {
@@ -148,6 +188,25 @@ void main() {
       expect(entry.name, 'Ada Lovelace');
     });
 
+    test('decodes BlueZObexPhonebookEntries', () {
+      final b = BytesBuilder();
+      _writePhonebookEntries(b, [
+        ('1.vcf', 'Ada Lovelace'),
+        ('2.vcf', 'Grace Hopper'),
+      ]);
+
+      final entries = GlazeCodec.decode<BlueZObexPhonebookEntries>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(entries.entries.length, 2);
+      expect(entries.entries[0].vcard, '1.vcf');
+      expect(entries.entries[0].name, 'Ada Lovelace');
+      expect(entries.entries[1].vcard, '2.vcf');
+      expect(entries.entries[1].name, 'Grace Hopper');
+    });
+
     test('decodes BlueZObexMessageFolder', () {
       final b = BytesBuilder();
       _writeString(b, 'inbox');
@@ -160,27 +219,23 @@ void main() {
       expect(folder.name, 'inbox');
     });
 
+    test('decodes BlueZObexMessageFolders', () {
+      final b = BytesBuilder();
+      _writeMessageFolders(b, ['inbox', 'sent']);
+
+      final folders = GlazeCodec.decode<BlueZObexMessageFolders>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(folders.folders.length, 2);
+      expect(folders.folders[0].name, 'inbox');
+      expect(folders.folders[1].name, 'sent');
+    });
+
     test('decodes BlueZObexMessageProps', () {
       final b = BytesBuilder();
-      _writeString(b, '/org/bluez/obex/client/session0/message0');
-      _writeString(b, 'telecom/msg/inbox');
-      _writeString(b, 'Status');
-      _writeString(b, '20260606T123456');
-      _writeString(b, 'Ada');
-      _writeString(b, '+10000000000');
-      _writeString(b, 'ada@example.com');
-      _writeString(b, 'Grace');
-      _writeString(b, '+19999999999');
-      _writeString(b, 'sms-gsm');
-      _writeUint64(b, 160);
-      _writeBool(b, true);
-      _writeString(b, 'complete');
-      _writeUint64(b, 0);
-      _writeBool(b, true);
-      _writeBool(b, false);
-      _writeBool(b, false);
-      _writeBool(b, false);
-      _writeBool(b, true);
+      _writeMessageProps(b);
 
       final props = GlazeCodec.decode<BlueZObexMessageProps>(
         Uint8List.fromList(b.toBytes()),
@@ -206,6 +261,40 @@ void main() {
       expect(props.deleted, false);
       expect(props.sent, false);
       expect(props.protected, true);
+    });
+
+    test('decodes BlueZObexMessages', () {
+      final b = BytesBuilder();
+      _writeUint32(b, 1);
+      _writeMessageProps(b);
+
+      final messages = GlazeCodec.decode<BlueZObexMessages>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(messages.messages.length, 1);
+      expect(
+        messages.messages[0].objectPath,
+        '/org/bluez/obex/client/session0/message0',
+      );
+      expect(messages.messages[0].folder, 'telecom/msg/inbox');
+      expect(messages.messages[0].subject, 'Status');
+      expect(messages.messages[0].type, 'sms-gsm');
+      expect(messages.messages[0].size, 160);
+      expect(messages.messages[0].text, true);
+    });
+
+    test('decodes BlueZObexFilterFields', () {
+      final b = BytesBuilder();
+      _writeStringList(b, ['Offset', 'MaxCount', 'Fields']);
+
+      final fields = GlazeCodec.decode<BlueZObexFilterFields>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(fields.fields, ['Offset', 'MaxCount', 'Fields']);
     });
 
     test('decodes BlueZObexTransferResult', () {

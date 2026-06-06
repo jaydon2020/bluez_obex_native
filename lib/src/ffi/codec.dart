@@ -23,10 +23,18 @@ class GlazeCodec {
       return _decodeObexPhonebookProps(r) as T;
     } else if (T == BlueZObexPhonebookEntry) {
       return _decodeObexPhonebookEntry(r) as T;
+    } else if (T == BlueZObexPhonebookEntries) {
+      return _decodeObexPhonebookEntries(r) as T;
     } else if (T == BlueZObexMessageFolder) {
       return _decodeObexMessageFolder(r) as T;
+    } else if (T == BlueZObexMessageFolders) {
+      return _decodeObexMessageFolders(r) as T;
     } else if (T == BlueZObexMessageProps) {
       return _decodeObexMessageProps(r) as T;
+    } else if (T == BlueZObexMessages) {
+      return _decodeObexMessages(r) as T;
+    } else if (T == BlueZObexFilterFields) {
+      return _decodeObexFilterFields(r) as T;
     } else if (T == BlueZObexTransferResult) {
       return _decodeObexTransferResult(r) as T;
     } else if (T == BlueZObexManagedObjects) {
@@ -83,8 +91,16 @@ class GlazeCodec {
     return BlueZObexPhonebookEntry(vcard: r.readString(), name: r.readString());
   }
 
+  static BlueZObexPhonebookEntries _decodeObexPhonebookEntries(_Reader r) {
+    return BlueZObexPhonebookEntries(entries: r.readPhonebookEntryList());
+  }
+
   static BlueZObexMessageFolder _decodeObexMessageFolder(_Reader r) {
     return BlueZObexMessageFolder(name: r.readString());
+  }
+
+  static BlueZObexMessageFolders _decodeObexMessageFolders(_Reader r) {
+    return BlueZObexMessageFolders(folders: r.readMessageFolderList());
   }
 
   static BlueZObexMessageProps _decodeObexMessageProps(_Reader r) {
@@ -109,6 +125,14 @@ class GlazeCodec {
       sent: r.readBool(),
       protected: r.readBool(),
     );
+  }
+
+  static BlueZObexMessages _decodeObexMessages(_Reader r) {
+    return BlueZObexMessages(messages: r.readMessagePropsList());
+  }
+
+  static BlueZObexFilterFields _decodeObexFilterFields(_Reader r) {
+    return BlueZObexFilterFields(fields: r.readStringList());
   }
 
   static BlueZObexTransferResult _decodeObexTransferResult(_Reader r) {
@@ -201,6 +225,30 @@ class _Reader {
     return List.generate(
       count,
       (_) => BlueZObexProperty(key: readString(), value: readString()),
+    );
+  }
+
+  List<BlueZObexPhonebookEntry> readPhonebookEntryList() {
+    final count = _readUint32();
+    return List.generate(
+      count,
+      (_) => BlueZObexPhonebookEntry(vcard: readString(), name: readString()),
+    );
+  }
+
+  List<BlueZObexMessageFolder> readMessageFolderList() {
+    final count = _readUint32();
+    return List.generate(
+      count,
+      (_) => BlueZObexMessageFolder(name: readString()),
+    );
+  }
+
+  List<BlueZObexMessageProps> readMessagePropsList() {
+    final count = _readUint32();
+    return List.generate(
+      count,
+      (_) => GlazeCodec._decodeObexMessageProps(this),
     );
   }
 

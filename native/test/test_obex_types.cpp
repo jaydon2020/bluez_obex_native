@@ -2,6 +2,7 @@
 
 #include "bluez_obex_types.h"
 #include "obex_object_manager.h"
+#include "obex_proxy_utils.h"
 
 #include <cassert>
 
@@ -105,6 +106,22 @@ void test_phonebook_entry_roundtrip() {
   assert(decoded.name == orig.name);
 }
 
+void test_phonebook_entries_roundtrip() {
+  BlueZObexPhonebookEntries orig;
+  orig.entries = {{"1.vcf", "Ada Lovelace"}, {"2.vcf", "Grace Hopper"}};
+
+  auto buf = glz::encode(orig);
+  BlueZObexPhonebookEntries decoded;
+  auto end = glz::decode(buf.data(), 0, decoded);
+
+  assert(end == buf.size());
+  assert(decoded.entries.size() == 2u);
+  assert(decoded.entries[0].vcard == "1.vcf");
+  assert(decoded.entries[0].name == "Ada Lovelace");
+  assert(decoded.entries[1].vcard == "2.vcf");
+  assert(decoded.entries[1].name == "Grace Hopper");
+}
+
 void test_message_folder_roundtrip() {
   BlueZObexMessageFolder orig{.name = "inbox"};
 
@@ -114,6 +131,20 @@ void test_message_folder_roundtrip() {
 
   assert(end == buf.size());
   assert(decoded.name == orig.name);
+}
+
+void test_message_folders_roundtrip() {
+  BlueZObexMessageFolders orig;
+  orig.folders = {{"inbox"}, {"sent"}};
+
+  auto buf = glz::encode(orig);
+  BlueZObexMessageFolders decoded;
+  auto end = glz::decode(buf.data(), 0, decoded);
+
+  assert(end == buf.size());
+  assert(decoded.folders.size() == 2u);
+  assert(decoded.folders[0].name == "inbox");
+  assert(decoded.folders[1].name == "sent");
 }
 
 void test_message_props_roundtrip() {
@@ -162,6 +193,46 @@ void test_message_props_roundtrip() {
   assert(decoded.deleted == orig.deleted);
   assert(decoded.sent == orig.sent);
   assert(decoded.protected_ == orig.protected_);
+}
+
+void test_message_list_roundtrip() {
+  BlueZObexMessageProps message;
+  message.objectPath = "/org/bluez/obex/client/session0/message0";
+  message.folder = "telecom/msg/inbox";
+  message.subject = "Status";
+  message.type = "sms-gsm";
+  message.size = 160;
+  message.text = true;
+  message.status = "complete";
+
+  BlueZObexMessages orig;
+  orig.messages = {message};
+
+  auto buf = glz::encode(orig);
+  BlueZObexMessages decoded;
+  auto end = glz::decode(buf.data(), 0, decoded);
+
+  assert(end == buf.size());
+  assert(decoded.messages.size() == 1u);
+  assert(decoded.messages[0].objectPath == message.objectPath);
+  assert(decoded.messages[0].folder == message.folder);
+  assert(decoded.messages[0].subject == message.subject);
+  assert(decoded.messages[0].type == message.type);
+  assert(decoded.messages[0].size == message.size);
+  assert(decoded.messages[0].text == message.text);
+  assert(decoded.messages[0].status == message.status);
+}
+
+void test_filter_fields_roundtrip() {
+  BlueZObexFilterFields orig;
+  orig.fields = {"Offset", "MaxCount", "Fields"};
+
+  auto buf = glz::encode(orig);
+  BlueZObexFilterFields decoded;
+  auto end = glz::decode(buf.data(), 0, decoded);
+
+  assert(end == buf.size());
+  assert(decoded.fields == orig.fields);
 }
 
 void test_transfer_result_roundtrip() {
@@ -275,6 +346,94 @@ void test_object_manager_extract_transfer_props() {
   assert(transfer.filename == "/tmp/contacts.vcf");
 }
 
+void test_proxy_utils_variant_conversion() {
+  obex::VariantMap props;
+  props["Filename"] = sdbus::Variant{std::string{"/tmp/message.bmsg"}};
+  props["Size"] = sdbus::Variant{uint64_t{4096}};
+  props["Visible"] = sdbus::Variant{true};
+  props["Path"] =
+      sdbus::Variant{sdbus::ObjectPath{"/org/bluez/obex/client/session0"}};
+
+  const auto normalized = obex::variant_map_to_properties(props);
+
+  assert(normalized.size() == 4u);
+  assert(normalized[0].key == "Filename");
+  assert(normalized[0].value == "/tmp/message.bmsg");
+  assert(normalized[1].key == "Path");
+  assert(normalized[1].value == "/org/bluez/obex/client/session0");
+  assert(normalized[2].key == "Size");
+  assert(normalized[2].value == "4096");
+  assert(normalized[3].key == "Visible");
+  assert(normalized[3].value == "true");
+}
+
+void test_proxy_utils_extract_phonebook_props() {
+  obex::PropertiesMap props;
+  props["Folder"] = sdbus::Variant{std::string{"telecom/pb"}};
+  props["DatabaseIdentifier"] =
+      sdbus::Variant{std::string{"A1A2A3A4B1B2C1C2D1D2E1E2E3E4E5E6"}};
+  props["PrimaryCounter"] =
+      sdbus::Variant{std::string{"00000000000000000000000000000001"}};
+  props["SecondaryCounter"] =
+      sdbus::Variant{std::string{"00000000000000000000000000000002"}};
+  props["FixedImageSize"] = sdbus::Variant{true};
+
+  auto phonebook = obex::phonebook_props_from_map(
+      "/org/bluez/obex/client/session0", props);
+
+  assert(phonebook.objectPath == "/org/bluez/obex/client/session0");
+  assert(phonebook.folder == "telecom/pb");
+  assert(phonebook.databaseIdentifier == "A1A2A3A4B1B2C1C2D1D2E1E2E3E4E5E6");
+  assert(phonebook.primaryCounter == "00000000000000000000000000000001");
+  assert(phonebook.secondaryCounter == "00000000000000000000000000000002");
+  assert(phonebook.fixedImageSize);
+}
+
+void test_proxy_utils_extract_message_props() {
+  obex::PropertiesMap props;
+  props["Folder"] = sdbus::Variant{std::string{"telecom/msg/inbox"}};
+  props["Subject"] = sdbus::Variant{std::string{"Status"}};
+  props["Timestamp"] = sdbus::Variant{std::string{"20260606T123456"}};
+  props["Sender"] = sdbus::Variant{std::string{"Ada"}};
+  props["SenderAddress"] = sdbus::Variant{std::string{"+10000000000"}};
+  props["ReplyTo"] = sdbus::Variant{std::string{"ada@example.com"}};
+  props["Recipient"] = sdbus::Variant{std::string{"Grace"}};
+  props["RecipientAddress"] = sdbus::Variant{std::string{"+19999999999"}};
+  props["Type"] = sdbus::Variant{std::string{"sms-gsm"}};
+  props["Size"] = sdbus::Variant{uint64_t{160}};
+  props["Text"] = sdbus::Variant{true};
+  props["Status"] = sdbus::Variant{std::string{"complete"}};
+  props["AttachmentSize"] = sdbus::Variant{uint64_t{12}};
+  props["Priority"] = sdbus::Variant{true};
+  props["Read"] = sdbus::Variant{false};
+  props["Deleted"] = sdbus::Variant{false};
+  props["Sent"] = sdbus::Variant{false};
+  props["Protected"] = sdbus::Variant{true};
+
+  auto message = obex::message_props_from_map(
+      "/org/bluez/obex/client/session0/message0", props);
+
+  assert(message.objectPath == "/org/bluez/obex/client/session0/message0");
+  assert(message.folder == "telecom/msg/inbox");
+  assert(message.subject == "Status");
+  assert(message.timestamp == "20260606T123456");
+  assert(message.sender == "Ada");
+  assert(message.senderAddress == "+10000000000");
+  assert(message.replyTo == "ada@example.com");
+  assert(message.recipient == "Grace");
+  assert(message.recipientAddress == "+19999999999");
+  assert(message.type == "sms-gsm");
+  assert(message.size == 160);
+  assert(message.text);
+  assert(message.status == "complete");
+  assert(message.attachmentSize == 12);
+  assert(message.priority);
+  assert(!message.read);
+  assert(!message.deleted);
+  assert(!message.sent);
+  assert(message.protected_);
+}
+
 } // namespace
 
 int main() {
@@ -283,12 +442,19 @@ int main() {
   test_transfer_props_roundtrip();
   test_phonebook_props_roundtrip();
   test_phonebook_entry_roundtrip();
+  test_phonebook_entries_roundtrip();
   test_message_folder_roundtrip();
+  test_message_folders_roundtrip();
   test_message_props_roundtrip();
+  test_message_list_roundtrip();
+  test_filter_fields_roundtrip();
   test_transfer_result_roundtrip();
   test_object_manager_roundtrips();
   test_error_roundtrip();
   test_object_manager_extract_session_props();
   test_object_manager_extract_transfer_props();
+  test_proxy_utils_variant_conversion();
+  test_proxy_utils_extract_phonebook_props();
+  test_proxy_utils_extract_message_props();
   return 0;
 }
