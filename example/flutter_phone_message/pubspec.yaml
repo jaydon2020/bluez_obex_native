@@ -1,5 +1,5 @@
-name: bluez_obex_native_example
-description: "Demonstrates how to use the bluez_obex_native plugin."
+name: flutter_phone_message
+description: "Phone contacts and messages demo for bluez_obex_native."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -28,19 +28,11 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  bluez_obex_native:
+    path: ../..
   flutter:
     sdk: flutter
 
-  bluez_obex_native:
-    # When depending on this package from a real application you should use:
-    #   bluez_obex_native: ^x.y.z
-    # See https://dart.dev/tools/pub/dependencies#version-constraints
-    # The example app is bundled with the plugin so we use a path dependency on
-    # the parent directory to use the current plugin's version.
-    path: ../
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

@@ -1,22 +1,37 @@
-# bluez_obex_native_example
+# bluez_obex_native examples
 
-Example Flutter app for the `bluez_obex_native` package.
+These examples demonstrate the main OBEX workflows for the `bluez_obex_native` package.
 
-The app demonstrates the main OBEX workflows:
+Run them from the package root. You can test them against a physical BlueZ OBEX device or use `--simulated` for local development without Bluetooth hardware.
 
-* Connect to a simulated endpoint or a physical BlueZ OBEX device.
-* Create a PBAP/MAP session for a Bluetooth address.
-* Sync contacts to a local `.vcf` file.
-* List inbox messages.
-* Download a selected message to a local `.bmsg` file.
+## Flutter Phone Message
 
-Run on Linux:
+`example/flutter_phone_message` is a dedicated Flutter Linux app mirroring the sibling `flutter_ble_scanner` and `flutter_ble_audio` examples.
 
 ```sh
+cd example/flutter_phone_message
 flutter run -d linux
 ```
 
-Leave **Simulated endpoint** enabled for local development without Bluetooth
-hardware. Disable it to use the native backend with `org.bluez.obex` on the
-session bus.
+The app lets you connect to an OBEX endpoint, sync contacts to a `.vcf` file, list inbox messages, and download selected messages.
 
+## Phonebook Sync
+
+Create a PBAP session and download contacts to a local `.vcf` file:
+
+```sh
+dart run example/phonebook_sync.dart --help
+dart run example/phonebook_sync.dart AA:BB:CC:DD:EE:FF
+dart run example/phonebook_sync.dart --simulated
+```
+
+## Message Inbox
+
+Create a MAP session, list messages, and download them to a `.bmsg` file:
+
+```sh
+dart run example/message_inbox.dart --help
+dart run example/message_inbox.dart AA:BB:CC:DD:EE:FF list
+dart run example/message_inbox.dart AA:BB:CC:DD:EE:FF download /org/bluez/obex/client/session0/message0
+dart run example/message_inbox.dart --simulated
+```
