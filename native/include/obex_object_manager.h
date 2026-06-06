@@ -39,7 +39,7 @@ public:
 
 private:
   static constexpr auto kObexService = "org.bluez.obex";
-  static constexpr auto kObexRootPath = "/org/bluez/obex";
+  static constexpr auto kObexRootPath = "/";
   static constexpr auto kObjectManagerIface =
       "org.freedesktop.DBus.ObjectManager";
   static constexpr auto kPropertiesIface = "org.freedesktop.DBus.Properties";

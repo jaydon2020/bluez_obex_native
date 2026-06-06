@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:ffi' as ffi;
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -9,20 +8,9 @@ import '../bluez_obex_native_bindings_generated.dart';
 import 'ffi/codec.dart';
 import 'ffi/types.dart';
 
-const String _libName = 'bluez_obex_native';
+import 'internal/library_loader.dart';
 
-final ffi.DynamicLibrary _dylib = () {
-  if (Platform.isMacOS || Platform.isIOS) {
-    return ffi.DynamicLibrary.open('$_libName.framework/$_libName');
-  }
-  if (Platform.isAndroid || Platform.isLinux) {
-    return ffi.DynamicLibrary.open('lib$_libName.so');
-  }
-  if (Platform.isWindows) {
-    return ffi.DynamicLibrary.open('$_libName.dll');
-  }
-  throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
-}();
+final ffi.DynamicLibrary _dylib = loadBluezObexNative();
 
 final BluezObexNativeBindings nativeBindings = BluezObexNativeBindings(_dylib);
 
