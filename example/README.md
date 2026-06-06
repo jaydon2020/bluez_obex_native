@@ -1,17 +1,22 @@
 # bluez_obex_native_example
 
-Demonstrates how to use the bluez_obex_native plugin.
+Example Flutter app for the `bluez_obex_native` package.
 
-## Getting Started
+The app demonstrates the main OBEX workflows:
 
-This project is a starting point for a Flutter application.
+* Connect to a simulated endpoint or a physical BlueZ OBEX device.
+* Create a PBAP/MAP session for a Bluetooth address.
+* Sync contacts to a local `.vcf` file.
+* List inbox messages.
+* Download a selected message to a local `.bmsg` file.
 
-A few resources to get you started if this is your first Flutter project:
+Run on Linux:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```sh
+flutter run -d linux
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Leave **Simulated endpoint** enabled for local development without Bluetooth
+hardware. Disable it to use the native backend with `org.bluez.obex` on the
+session bus.
+

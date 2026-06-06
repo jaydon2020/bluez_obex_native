@@ -5,21 +5,40 @@ message access.
 
 ## Getting Started
 
-This project is a starting point for a Flutter
-[FFI plugin](https://flutter.dev/to/ffi-package),
-a specialized package that includes native code directly invoked with Dart FFI.
+The public API is object oriented and starts with `BlueZObexClient`.
+
+```dart
+final client = await BlueZObexClient.connect();
+final session = await client.createSession(
+  'AA:BB:CC:DD:EE:FF',
+  target: 'pbap',
+);
+
+await session.phonebook.select('telecom', 'pb');
+final entries = await session.phonebook.list(filters: {'MaxCount': 50});
+final transfer = await session.phonebook.pullAll('/tmp/contacts.vcf');
+
+await client.dispose();
+```
+
+For CI and local development without Bluetooth hardware, use the simulated
+endpoint:
+
+```dart
+final client = await BlueZObexClient.simulated();
+```
 
 ## Project structure
 
 This template uses the following structure:
 
-* `src`: Contains the native source code, and a CmakeFile.txt file for building
-  that source code into a dynamic library.
+* `native`: Contains the native C/C++ source, generated sdbus-c++ proxies,
+  D-Bus XML interfaces, and CMake configuration.
 
 * `lib`: Contains the Dart code that defines the API of the plugin, and which
   calls into the native code using `dart:ffi`.
 
-* platform folders (`android`, `ios`, `windows`, etc.): Contains the build files
+* platform folders (`linux`, etc.): Contains the build files
   for building and bundling the native code library with the platform application.
 
 ## Building and bundling native code
@@ -60,20 +79,14 @@ A plugin can have both FFI and method channels:
 
 The native build systems that are invoked by FFI (and method channel) plugins are:
 
-* For Android: Gradle, which invokes the Android NDK for native builds.
-  * See the documentation in android/build.gradle.
-* For iOS and MacOS: Xcode, via CocoaPods.
-  * See the documentation in ios/bluez_obex_native.podspec.
-  * See the documentation in macos/bluez_obex_native.podspec.
-* For Linux and Windows: CMake.
+* For Linux: CMake.
   * See the documentation in linux/CMakeLists.txt.
-  * See the documentation in windows/CMakeLists.txt.
 
 ## Binding to native code
 
 To use the native code, bindings in Dart are needed.
 To avoid writing these by hand, they are generated from the header file
-(`src/bluez_obex_native.h`) by `package:ffigen`.
+(`native/include/bluez_obex_native.h`) by `package:ffigen`.
 Regenerate the bindings by running `dart run ffigen --config ffigen.yaml`.
 
 ## Invoking native code
@@ -95,6 +108,22 @@ await phonebook.select('int', 'pb');
 final entries = await phonebook.list(filters: {'MaxCount': 50});
 
 await client.dispose();
+```
+
+## Documentation
+
+* [API reference](docs/api.md)
+* [Verification guide](docs/verification.md)
+
+## Verification
+
+```sh
+flutter test test/codec_test.dart
+flutter test test/simulated_obex_integration_test.dart
+flutter analyze --fatal-infos
+cmake -S native -B build/native-tests -DBUILD_TESTING=ON
+cmake --build build/native-tests --target test_obex_types -j2
+ctest --test-dir build/native-tests --output-on-failure
 ```
 
 ## Flutter help
