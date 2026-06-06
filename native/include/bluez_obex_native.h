@@ -12,6 +12,17 @@
 extern "C" {
 #endif
 
+// ── Client lifecycle ────────────────────────────────────────────────────────
+
+FFI_PLUGIN_EXPORT void bluez_obex_init(void *dart_api_dl_data);
+FFI_PLUGIN_EXPORT void *bluez_obex_client_create(int64_t events_port);
+FFI_PLUGIN_EXPORT void bluez_obex_client_destroy(void *handle);
+
+// ── ObjectManager queries ──────────────────────────────────────────────────
+
+FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t *out,
+                                                     int32_t capacity);
+
 // A very short-lived native function.
 //
 // For very short-lived functions, it is fine to call them on the main isolate.

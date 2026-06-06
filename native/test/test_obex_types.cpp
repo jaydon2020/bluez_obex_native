@@ -1,6 +1,7 @@
 // test_obex_types.cpp - glaze roundtrip tests for BlueZ OBEX wire structs.
 
 #include "bluez_obex_types.h"
+#include "obex_object_manager.h"
 
 #include <cassert>
 
@@ -229,6 +230,51 @@ void test_error_roundtrip() {
   assert(decoded.message == orig.message);
 }
 
+void test_object_manager_extract_session_props() {
+  ObexObjectManager::PropertiesMap props;
+  props["Source"] = sdbus::Variant{std::string{"00:11:22:33:44:55"}};
+  props["Destination"] = sdbus::Variant{std::string{"AA:BB:CC:DD:EE:FF"}};
+  props["Channel"] = sdbus::Variant{uint8_t{12}};
+  props["Target"] = sdbus::Variant{std::string{"pbap"}};
+  props["Root"] = sdbus::Variant{std::string{"/telecom"}};
+
+  auto session = ObexObjectManager::extract_session_props(
+      "/org/bluez/obex/client/session0", props);
+
+  assert(session.objectPath == "/org/bluez/obex/client/session0");
+  assert(session.source == "00:11:22:33:44:55");
+  assert(session.destination == "AA:BB:CC:DD:EE:FF");
+  assert(session.channel == 12);
+  assert(session.target == "pbap");
+  assert(session.root == "/telecom");
+}
+
+void test_object_manager_extract_transfer_props() {
+  ObexObjectManager::PropertiesMap props;
+  props["Status"] = sdbus::Variant{std::string{"active"}};
+  props["Session"] =
+      sdbus::Variant{sdbus::ObjectPath{"/org/bluez/obex/client/session0"}};
+  props["Name"] = sdbus::Variant{std::string{"contacts.vcf"}};
+  props["Type"] = sdbus::Variant{std::string{"text/x-vcard"}};
+  props["Time"] = sdbus::Variant{uint64_t{1710000000}};
+  props["Size"] = sdbus::Variant{uint64_t{4096}};
+  props["Transferred"] = sdbus::Variant{uint64_t{1024}};
+  props["Filename"] = sdbus::Variant{std::string{"/tmp/contacts.vcf"}};
+
+  auto transfer = ObexObjectManager::extract_transfer_props(
+      "/org/bluez/obex/client/session0/transfer0", props);
+
+  assert(transfer.objectPath == "/org/bluez/obex/client/session0/transfer0");
+  assert(transfer.status == "active");
+  assert(transfer.session == "/org/bluez/obex/client/session0");
+  assert(transfer.name == "contacts.vcf");
+  assert(transfer.type == "text/x-vcard");
+  assert(transfer.time == 1710000000);
+  assert(transfer.size == 4096);
+  assert(transfer.transferred == 1024);
+  assert(transfer.filename == "/tmp/contacts.vcf");
+}
+
 } // namespace
 
 int main() {
@@ -242,5 +288,7 @@ int main() {
   test_transfer_result_roundtrip();
   test_object_manager_roundtrips();
   test_error_roundtrip();
+  test_object_manager_extract_session_props();
+  test_object_manager_extract_transfer_props();
   return 0;
 }

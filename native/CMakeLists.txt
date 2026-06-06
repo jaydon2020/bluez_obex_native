@@ -15,8 +15,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(third_party/sdbus-cpp EXCLUDE_FROM_ALL)
 
 add_library(bluez_obex_native_core STATIC
+  src/bluez_obex_client.cpp
   src/bluez_obex_native.c
   src/dart_api_dl.c
+  src/obex_client.cpp
+  src/obex_object_manager.cpp
 )
 
 target_include_directories(bluez_obex_native_core
@@ -37,8 +40,11 @@ set_target_properties(bluez_obex_native_core PROPERTIES
 )
 
 add_library(bluez_obex_native SHARED
+  src/bluez_obex_client.cpp
   src/bluez_obex_native.c
   src/dart_api_dl.c
+  src/obex_client.cpp
+  src/obex_object_manager.cpp
 )
 
 target_include_directories(bluez_obex_native

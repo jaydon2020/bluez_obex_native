@@ -26,6 +26,65 @@ class BluezObexNativeBindings {
     ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup,
   ) : _lookup = lookup;
 
+  /// ── Client lifecycle ────────────────────────────────────────────────────────
+  void bluez_obex_init(ffi.Pointer<ffi.Void> dart_api_dl_data) {
+    return _bluez_obex_init(dart_api_dl_data);
+  }
+
+  late final _bluez_obex_initPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'bluez_obex_init',
+      );
+  late final _bluez_obex_init = _bluez_obex_initPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  ffi.Pointer<ffi.Void> bluez_obex_client_create(int events_port) {
+    return _bluez_obex_client_create(events_port);
+  }
+
+  late final _bluez_obex_client_createPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Void> Function(ffi.Int64)>>(
+        'bluez_obex_client_create',
+      );
+  late final _bluez_obex_client_create = _bluez_obex_client_createPtr
+      .asFunction<ffi.Pointer<ffi.Void> Function(int)>();
+
+  void bluez_obex_client_destroy(ffi.Pointer<ffi.Void> handle) {
+    return _bluez_obex_client_destroy(handle);
+  }
+
+  late final _bluez_obex_client_destroyPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'bluez_obex_client_destroy',
+      );
+  late final _bluez_obex_client_destroy = _bluez_obex_client_destroyPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  /// ── ObjectManager queries ──────────────────────────────────────────────────
+  int bluez_obex_get_managed_objects(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_get_managed_objects(handle, out, capacity);
+  }
+
+  late final _bluez_obex_get_managed_objectsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_get_managed_objects');
+  late final _bluez_obex_get_managed_objects =
+      _bluez_obex_get_managed_objectsPtr
+          .asFunction<
+            int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Uint8>, int)
+          >();
+
   /// A very short-lived native function.
   ///
   /// For very short-lived functions, it is fine to call them on the main isolate.
