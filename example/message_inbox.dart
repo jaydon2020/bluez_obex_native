@@ -81,17 +81,18 @@ Future<void> main(List<String> args) async {
       final message = matched.first;
       print('Found message at: ${message.objectPath}');
       final targetFile = 'message.bmsg';
-      print('Downloading message to $targetFile...');
-      final transfer = await message.get(targetFile, attachment: false);
+      final absoluteTargetFile = File(targetFile).absolute.path;
+      print('Downloading message to $absoluteTargetFile...');
+      final transfer = await message.get(absoluteTargetFile, attachment: false);
       print('Transfer started: ${transfer.transferPath}');
 
       print('Marking as read...');
       await message.setRead(true);
 
       if (File(targetFile).existsSync()) {
-        print('Message downloaded to ${File(targetFile).absolute.path}');
+        print('Message downloaded to $absoluteTargetFile');
       } else {
-        print('Transfer complete. Note: The BlueZ OBEX daemon typically saves files to: ~/.cache/obexd/$targetFile');
+        print('Transfer complete. Note: If the file is not in the current directory, check the BlueZ OBEX daemon path.');
       }
     } else {
       print('Unknown action: $action');
