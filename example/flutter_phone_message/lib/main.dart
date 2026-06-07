@@ -40,6 +40,7 @@ class PhoneMessageHome extends StatefulWidget {
 
 class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   final _statusLogNotifier = ValueNotifier<List<String>>([]);
+  final _dialogScrollController = ScrollController();
   final _addressController = TextEditingController(text: 'AA:BB:CC:DD:EE:FF');
   final _limitController = TextEditingController(text: '10');
   final _log = <String>[];
@@ -96,6 +97,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   void dispose() {
     _addressController.dispose();
     _limitController.dispose();
+    _dialogScrollController.dispose();
     _statusLogNotifier.dispose();
     _eventSubscription?.cancel();
     _client?.dispose();
@@ -103,14 +105,38 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     super.dispose();
   }
 
+  /// Appends a step message to the progress dialog log and scrolls to the
+  /// bottom so the user can always see the latest update.
+  void _appendDialogLog(String message) {
+    if (!mounted) {
+      return;
+    }
+    _statusLogNotifier.value = [..._statusLogNotifier.value, message];
+    // Auto-scroll to the newest entry after the list has been rebuilt.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_dialogScrollController.hasClients) {
+        _dialogScrollController.animateTo(
+          _dialogScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
   Future<void> _run(String label, Future<void> Function() action) async {
     if (_busy) {
       return;
     }
-    _statusLogNotifier.value = ['$label...'];
-    bool dialogDismissed = false;
 
-    showDialog<void>(
+    // Reset dialog log.
+    _statusLogNotifier.value = ['Starting: $label...'];
+
+    // Track whether the dialog has already been closed (e.g. popped by us).
+    bool dialogActive = false;
+
+    // Show the blocking progress dialog.
+    final dialogFuture = showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) {
@@ -128,7 +154,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Processing...',
+                      label,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -136,12 +162,15 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
               ),
               content: SizedBox(
                 width: 400,
-                height: 200,
+                height: 220,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Action: $label', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
+                    const Text(
+                      'Please wait — do not close the app',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(height: 10),
                     Expanded(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -151,10 +180,11 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
                         child: Padding(
                           padding: const EdgeInsets.all(8),
                           child: ListView.builder(
+                            controller: _dialogScrollController,
                             itemCount: logs.length,
                             itemBuilder: (context, idx) {
                               return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                padding: const EdgeInsets.symmetric(vertical: 2),
                                 child: Text(
                                   logs[idx],
                                   style: TextStyle(
@@ -176,27 +206,36 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
           },
         );
       },
-    ).then((_) {
-      dialogDismissed = true;
-    });
+    );
 
-    setState(() {
-      _busy = true;
-    });
+    // Let the dialog mount for at least one frame before we start the action.
+    // This guarantees the CircularProgressIndicator is visible immediately.
+    dialogActive = true;
+    await Future<void>.delayed(Duration.zero);
+
+    setState(() => _busy = true);
 
     try {
       await action();
+      _appendDialogLog('✓ $label complete');
       _prependLog('$label complete');
     } catch (error) {
+      _appendDialogLog('✗ $label failed: $error');
       _prependLog('$label failed: $error');
+      // Give the user a moment to read the error before the dialog closes.
+      await Future<void>.delayed(const Duration(seconds: 2));
     } finally {
+      if (mounted && dialogActive) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogActive = false;
+      }
       if (mounted) {
-        if (!dialogDismissed) {
-          Navigator.of(context, rootNavigator: true).pop();
-        }
         setState(() => _busy = false);
       }
     }
+
+    // Drain the dialog future to avoid unhandled-future issues.
+    await dialogFuture.catchError((_) {});
   }
 
   Future<BlueZObexClient> _ensureClient() async {
@@ -271,6 +310,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   }
 
   Future<void> _refreshDevices() async {
+    _appendDialogLog('Scanning for BlueZ devices...');
     final devices = await BlueZObexClient.devices(simulated: _simulated);
     final connectedDevices = devices.where((device) => device.connected);
     final selectedAddress =
@@ -285,6 +325,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     if (selectedAddress != null) {
       _addressController.text = selectedAddress;
     }
+    _appendDialogLog('Found ${devices.length} device(s)');
     setState(() {
       _devices = devices;
       _selectedAddress = selectedAddress;
@@ -338,12 +379,19 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   }
 
   Future<void> _syncContacts() async {
+    _appendDialogLog('Connecting session (PBAP)...');
     final session = await _createSession('pbap');
     final sessionPath = session.objectPath;
     final limit = _limitAll ? null : (int.tryParse(_limitController.text) ?? 10);
     final targetFile = '${_workspace!.path}/contacts.vcf';
 
+    _appendDialogLog(
+      limit == null
+          ? 'Listing all contacts from phone...'
+          : 'Listing up to $limit contacts from phone...',
+    );
     final contacts = await _syncContactsIsolate(sessionPath, limit);
+    _appendDialogLog('Received ${contacts.length} contact(s). Pulling full vCard file...');
 
     final filters = <String, dynamic>{};
     if (limit != null) {
@@ -352,19 +400,27 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     await _waitForTransferComplete(
       () => session.phonebook.pullAll(targetFile, filters: filters),
     );
+    _appendDialogLog('Saved contacts.vcf');
     setState(() {
       _contacts = contacts;
       _contactsFile = targetFile;
-      _prependLog('saved contacts.vcf');
+      _prependLog('saved contacts.vcf (${contacts.length} entries)');
     });
   }
 
   Future<void> _loadInbox() async {
+    _appendDialogLog('Connecting session (MAP)...');
     final session = await _createSession('map');
     final sessionPath = session.objectPath;
     final limit = _limitAll ? null : (int.tryParse(_limitController.text) ?? 10);
 
+    _appendDialogLog(
+      limit == null
+          ? 'Listing all inbox messages from phone...'
+          : 'Listing up to $limit inbox messages from phone...',
+    );
     final messagesProps = await _loadInboxIsolate(sessionPath, limit);
+    _appendDialogLog('Received ${messagesProps.length} message(s). Building message list...');
 
     final client = await _ensureClient();
     final messages = messagesProps.map((p) => client.message(p.objectPath, p)).toList();
@@ -377,9 +433,11 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
 
   Future<void> _downloadMessage(BlueZObexMessage message) async {
     final targetFile = '${_workspace!.path}/message.bmsg';
+    _appendDialogLog('Initiating message download transfer...');
     await _waitForTransferComplete(
       () => message.get(targetFile, attachment: false),
     );
+    _appendDialogLog('Transfer complete. Marking as read...');
     await message.setRead(true);
     setState(() {
       _messageFile = targetFile;
@@ -686,7 +744,6 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     if (_log.length > 8) {
       _log.removeLast();
     }
-    _statusLogNotifier.value = [..._statusLogNotifier.value, message];
   }
 
   @override
