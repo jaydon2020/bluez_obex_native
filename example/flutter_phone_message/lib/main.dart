@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:bluez_obex_native/bluez_obex_native.dart';
@@ -38,6 +39,7 @@ class PhoneMessageHome extends StatefulWidget {
 }
 
 class _PhoneMessageHomeState extends State<PhoneMessageHome> {
+  final _statusLogNotifier = ValueNotifier<List<String>>([]);
   final _addressController = TextEditingController(text: 'AA:BB:CC:DD:EE:FF');
   final _limitController = TextEditingController(text: '10');
   final _log = <String>[];
@@ -94,6 +96,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   void dispose() {
     _addressController.dispose();
     _limitController.dispose();
+    _statusLogNotifier.dispose();
     _eventSubscription?.cancel();
     _client?.dispose();
     _workspace?.delete(recursive: true).ignore();
@@ -104,21 +107,93 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     if (_busy) {
       return;
     }
+    _statusLogNotifier.value = ['$label...'];
+    bool dialogDismissed = false;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return ValueListenableBuilder<List<String>>(
+          valueListenable: _statusLogNotifier,
+          builder: (context, logs, _) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Processing...',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 400,
+                height: 200,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Action: $label', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: ListView.builder(
+                            itemCount: logs.length,
+                            itemBuilder: (context, idx) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                child: Text(
+                                  logs[idx],
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontFamily: 'monospace',
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).then((_) {
+      dialogDismissed = true;
+    });
+
     setState(() {
       _busy = true;
-      _prependLog('$label...');
     });
+
     try {
       await action();
-      if (mounted) {
-        setState(() => _prependLog('$label complete'));
-      }
+      _prependLog('$label complete');
     } catch (error) {
-      if (mounted) {
-        setState(() => _prependLog('$label failed: $error'));
-      }
+      _prependLog('$label failed: $error');
     } finally {
       if (mounted) {
+        if (!dialogDismissed) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
         setState(() => _busy = false);
       }
     }
@@ -217,19 +292,65 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     });
   }
 
+  static Future<List<BlueZObexPhonebookEntry>> _syncContactsIsolate(
+    String sessionPath,
+    int? limit,
+  ) {
+    return Isolate.run<List<BlueZObexPhonebookEntry>>(() async {
+      final client = await BlueZObexClient.connect();
+      try {
+        final sessionProxy = client.session(sessionPath);
+        final phonebook = sessionProxy.phonebook;
+        await phonebook.select('int', 'pb');
+        final filters = <String, dynamic>{};
+        if (limit != null) {
+          filters['MaxCount'] = limit;
+        }
+        return await phonebook.list(filters: filters);
+      } finally {
+        await client.dispose();
+      }
+    });
+  }
+
+  static Future<List<BlueZObexMessageProps>> _loadInboxIsolate(
+    String sessionPath,
+    int? limit,
+  ) {
+    return Isolate.run<List<BlueZObexMessageProps>>(() async {
+      final client = await BlueZObexClient.connect();
+      try {
+        final sessionProxy = client.session(sessionPath);
+        final access = sessionProxy.messageAccess;
+        final filters = <String, dynamic>{'SubjectLength': 120};
+        if (limit != null) {
+          filters['MaxCount'] = limit;
+        }
+        final list = await access.listMessages(
+          'telecom/msg/inbox',
+          filters: filters,
+        );
+        return list.map((m) => m.lastProperties!).toList();
+      } finally {
+        await client.dispose();
+      }
+    });
+  }
+
   Future<void> _syncContacts() async {
     final session = await _createSession('pbap');
-    final phonebook = session.phonebook;
-    await phonebook.select('int', 'pb');
+    final sessionPath = session.objectPath;
     final limit = _limitAll ? null : (int.tryParse(_limitController.text) ?? 10);
+    final targetFile = '${_workspace!.path}/contacts.vcf';
+
+    final contacts = await _syncContactsIsolate(sessionPath, limit);
+
     final filters = <String, dynamic>{};
     if (limit != null) {
       filters['MaxCount'] = limit;
     }
-    final contacts = await phonebook.list(filters: filters);
-    final targetFile = '${_workspace!.path}/contacts.vcf';
     await _waitForTransferComplete(
-      () => phonebook.pullAll(targetFile, filters: filters),
+      () => session.phonebook.pullAll(targetFile, filters: filters),
     );
     setState(() {
       _contacts = contacts;
@@ -240,16 +361,14 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
 
   Future<void> _loadInbox() async {
     final session = await _createSession('map');
-    final access = session.messageAccess;
+    final sessionPath = session.objectPath;
     final limit = _limitAll ? null : (int.tryParse(_limitController.text) ?? 10);
-    final filters = <String, dynamic>{'SubjectLength': 120};
-    if (limit != null) {
-      filters['MaxCount'] = limit;
-    }
-    final messages = await access.listMessages(
-      'telecom/msg/inbox',
-      filters: filters,
-    );
+
+    final messagesProps = await _loadInboxIsolate(sessionPath, limit);
+
+    final client = await _ensureClient();
+    final messages = messagesProps.map((p) => client.message(p.objectPath, p)).toList();
+
     setState(() {
       _messages = messages;
       _prependLog('loaded ${messages.length} inbox message(s)');
@@ -567,6 +686,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     if (_log.length > 8) {
       _log.removeLast();
     }
+    _statusLogNotifier.value = [..._statusLogNotifier.value, message];
   }
 
   @override
