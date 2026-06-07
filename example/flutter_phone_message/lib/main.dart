@@ -51,6 +51,9 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   List<BlueZObexMessage> _messages = const [];
   static const bool _simulated = false;
   bool _busy = false;
+  bool _limitAll = false;
+  bool _contactsExpanded = true;
+  bool _messagesExpanded = true;
   String? _contactsFile;
   String? _messageFile;
 
@@ -218,11 +221,15 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     final session = await _createSession('pbap');
     final phonebook = session.phonebook;
     await phonebook.select('int', 'pb');
-    final limit = int.tryParse(_limitController.text) ?? 10;
-    final contacts = await phonebook.list(filters: {'MaxCount': limit});
+    final limit = _limitAll ? null : (int.tryParse(_limitController.text) ?? 10);
+    final filters = <String, dynamic>{};
+    if (limit != null) {
+      filters['MaxCount'] = limit;
+    }
+    final contacts = await phonebook.list(filters: filters);
     final targetFile = '${_workspace!.path}/contacts.vcf';
     await _waitForTransferComplete(
-      () => phonebook.pullAll(targetFile, filters: {'MaxCount': limit}),
+      () => phonebook.pullAll(targetFile, filters: filters),
     );
     setState(() {
       _contacts = contacts;
@@ -234,10 +241,14 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   Future<void> _loadInbox() async {
     final session = await _createSession('map');
     final access = session.messageAccess;
-    final limit = int.tryParse(_limitController.text) ?? 10;
+    final limit = _limitAll ? null : (int.tryParse(_limitController.text) ?? 10);
+    final filters = <String, dynamic>{'SubjectLength': 120};
+    if (limit != null) {
+      filters['MaxCount'] = limit;
+    }
     final messages = await access.listMessages(
       'telecom/msg/inbox',
-      filters: {'MaxCount': limit, 'SubjectLength': 120},
+      filters: filters,
     );
     setState(() {
       _messages = messages;
@@ -582,10 +593,20 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
               });
             },
           ),
-          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Retrieve all (no limit)'),
+            value: _limitAll,
+            onChanged: _busy ? null : (val) {
+              setState(() {
+                _limitAll = val;
+              });
+            },
+          ),
+          const SizedBox(height: 8),
           TextField(
             controller: _limitController,
-            enabled: !_busy,
+            enabled: !_busy && !_limitAll,
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
               labelText: 'Limit (max messages / contacts)',
@@ -624,43 +645,71 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
           ),
           const SizedBox(height: 16),
           if (_contacts.isNotEmpty) ...[
-            Text('Contacts', style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Contacts', style: Theme.of(context).textTheme.titleMedium),
+                IconButton(
+                  icon: Icon(_contactsExpanded ? Icons.expand_less : Icons.expand_more),
+                  onPressed: () {
+                    setState(() {
+                      _contactsExpanded = !_contactsExpanded;
+                    });
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            for (final contact in _contacts)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                minLeadingWidth: 28,
-                leading: const Icon(Icons.person, size: 18),
-                title: Text(contact.name),
-                subtitle: Text(contact.vcard),
-                trailing: const Icon(Icons.chevron_right, size: 18),
-                onTap: () => _showContactDetails(contact),
-              ),
+            if (_contactsExpanded)
+              for (final contact in _contacts)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  minLeadingWidth: 28,
+                  leading: const Icon(Icons.person, size: 18),
+                  title: Text(contact.name),
+                  subtitle: Text(contact.vcard),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () => _showContactDetails(contact),
+                ),
           ],
           if (_messages.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Inbox', style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Inbox', style: Theme.of(context).textTheme.titleMedium),
+                IconButton(
+                  icon: Icon(_messagesExpanded ? Icons.expand_less : Icons.expand_more),
+                  onPressed: () {
+                    setState(() {
+                      _messagesExpanded = !_messagesExpanded;
+                    });
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            for (final message in _messages)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                minLeadingWidth: 28,
-                leading: const Icon(Icons.message, size: 18),
-                title: Text(
-                  message.lastProperties?.subject ?? message.objectPath,
+            if (_messagesExpanded)
+              for (final message in _messages)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  minLeadingWidth: 28,
+                  leading: const Icon(Icons.message, size: 18),
+                  title: Text(
+                    message.lastProperties?.subject ?? message.objectPath,
+                  ),
+                  subtitle: Text(message.lastProperties?.sender ?? ''),
+                  trailing: IconButton(
+                    tooltip: 'Download message',
+                    icon: const Icon(Icons.download, size: 18),
+                    onPressed: _busy
+                        ? null
+                        : () => _run(
+                            'download message',
+                            () => _downloadMessage(message),
+                          ),
+                  ),
                 ),
-                subtitle: Text(message.lastProperties?.sender ?? ''),
-                trailing: IconButton(
-                  tooltip: 'Download message',
-                  icon: const Icon(Icons.download, size: 18),
-                  onPressed: _busy
-                      ? null
-                      : () => _run(
-                          'download message',
-                          () => _downloadMessage(message),
-                        ),
-                ),
-              ),
           ],
           const SizedBox(height: 16),
           Text('Activity', style: Theme.of(context).textTheme.titleMedium),

@@ -16,14 +16,14 @@ Future<void> main(List<String> args) async {
         '  download <message_path>  Download a specific message to message.bmsg',
         '',
         '  address    The Bluetooth address (e.g. AA:BB:CC:DD:EE:FF)',
-        '  --limit <number>  Max number of messages to fetch (default: 10)',
+        '  --limit <number>  Max number of messages to fetch (default: all)',
       ],
     );
     return;
   }
 
-  final limitStr = hasFlag(args, '--limit') ? optionValue(args, '--limit') : '10';
-  final limit = int.tryParse(limitStr) ?? 10;
+  final limitStr = hasFlag(args, '--limit') ? optionValue(args, '--limit') : null;
+  final limit = limitStr != null ? int.tryParse(limitStr) : null;
 
   final positionalArgs = <String>[];
   for (var i = 0; i < args.length; i++) {
@@ -54,9 +54,13 @@ Future<void> main(List<String> args) async {
 
     if (action == 'list') {
       print('Listing messages...');
+      final filters = <String, dynamic>{'SubjectLength': 120};
+      if (limit != null) {
+        filters['MaxCount'] = limit;
+      }
       final messages = await session.messageAccess.listMessages(
         'telecom/msg/inbox',
-        filters: {'MaxCount': limit, 'SubjectLength': 120},
+        filters: filters,
       );
       if (messages.isEmpty) {
         print('  (No messages)');

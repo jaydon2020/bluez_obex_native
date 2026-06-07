@@ -2,7 +2,7 @@
 
 These examples demonstrate the main OBEX workflows for the `bluez_obex_native` package.
 
-Run them from the package root. You can test them against a physical BlueZ OBEX device or use `--simulated` for local development without Bluetooth hardware.
+Run them from the package root. You can test them against a physical BlueZ OBEX device.
 
 For CLI runs, the package resolves the native library in this order:
 
@@ -29,7 +29,7 @@ Create a PBAP session and download contacts to a local `.vcf` file:
 ```sh
 dart run example/phonebook_sync.dart --help
 dart run example/phonebook_sync.dart AA:BB:CC:DD:EE:FF
-dart run example/phonebook_sync.dart --simulated
+dart run example/phonebook_sync.dart AA:BB:CC:DD:EE:FF --limit 10
 ```
 
 ## Message Inbox
@@ -39,6 +39,6 @@ Create a MAP session, list messages, and download them to a `.bmsg` file:
 ```sh
 dart run example/message_inbox.dart --help
 dart run example/message_inbox.dart AA:BB:CC:DD:EE:FF list
+dart run example/message_inbox.dart AA:BB:CC:DD:EE:FF list --limit 10
 dart run example/message_inbox.dart AA:BB:CC:DD:EE:FF download /org/bluez/obex/client/session0/message0
-dart run example/message_inbox.dart --simulated
 ```
