@@ -27,15 +27,15 @@ class BluezObexNativeBindings {
   ) : _lookup = lookup;
 
   /// ── Client lifecycle ────────────────────────────────────────────────────────
-  int bluez_obex_get_paired_devices(ffi.Pointer<ffi.Uint8> out, int capacity) {
-    return _bluez_obex_get_paired_devices(out, capacity);
+  int bluez_obex_get_devices(ffi.Pointer<ffi.Uint8> out, int capacity) {
+    return _bluez_obex_get_devices(out, capacity);
   }
 
-  late final _bluez_obex_get_paired_devicesPtr =
+  late final _bluez_obex_get_devicesPtr =
       _lookup<
-        ffi.NativeFunction<ffi.Int Function(ffi.Pointer<ffi.Uint8>, ffi.Uint32)>
-      >('bluez_obex_get_paired_devices');
-  late final _bluez_obex_get_paired_devices = _bluez_obex_get_paired_devicesPtr
+        ffi.NativeFunction<ffi.Int Function(ffi.Pointer<ffi.Uint8>, ffi.Int32)>
+      >('bluez_obex_get_devices');
+  late final _bluez_obex_get_devices = _bluez_obex_get_devicesPtr
       .asFunction<int Function(ffi.Pointer<ffi.Uint8>, int)>();
 
   void bluez_obex_init(ffi.Pointer<ffi.Void> dart_api_dl_data) {

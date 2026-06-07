@@ -33,10 +33,6 @@ public:
   extract_transfer_props(const std::string &object_path,
                          const PropertiesMap &props);
 
-  template <typename T>
-  static T get_prop(const PropertiesMap &props, const std::string &key,
-                    const T &fallback = {});
-
 private:
   static constexpr auto kObexService = "org.bluez.obex";
   static constexpr auto kObexRootPath = "/";

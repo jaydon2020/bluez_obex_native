@@ -43,20 +43,7 @@ class BlueZObexNativeBridge {
     String operation,
     int Function(ffi.Pointer<ffi.Uint8> out, int capacity) call,
   ) {
-    final needed = call(ffi.nullptr, 0);
-    _checkResult(operation, needed, allowZero: true);
-    if (needed == 0) {
-      return Uint8List(0);
-    }
-
-    final out = calloc<ffi.Uint8>(needed);
-    try {
-      final written = call(out, needed);
-      _checkResult(operation, written, allowZero: true);
-      return Uint8List.fromList(out.asTypedList(written));
-    } finally {
-      calloc.free(out);
-    }
+    return readNativeBytes(operation, call);
   }
 
   T readGlaze<T>(
@@ -80,6 +67,33 @@ class BlueZObexNativeBridge {
   void dispose() {
     nativeBindings.bluez_obex_client_destroy(handle);
   }
+}
+
+Uint8List readNativeBytes(
+  String operation,
+  int Function(ffi.Pointer<ffi.Uint8> out, int capacity) call,
+) {
+  final needed = call(ffi.nullptr, 0);
+  _checkResult(operation, needed, allowZero: true);
+  if (needed == 0) {
+    return Uint8List(0);
+  }
+
+  final out = calloc<ffi.Uint8>(needed);
+  try {
+    final written = call(out, needed);
+    _checkResult(operation, written, allowZero: true);
+    return Uint8List.fromList(out.asTypedList(written));
+  } finally {
+    calloc.free(out);
+  }
+}
+
+T readNativeGlaze<T>(
+  String operation,
+  int Function(ffi.Pointer<ffi.Uint8> out, int capacity) call,
+) {
+  return GlazeCodec.decode<T>(readNativeBytes(operation, call), 0);
 }
 
 class NativeString implements ffi.Finalizable {

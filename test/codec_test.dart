@@ -46,14 +46,16 @@ void _writeStringList(BytesBuilder b, List<String> values) {
   }
 }
 
-void _writePairedDevices(
+void _writeDevices(
   BytesBuilder b,
-  List<(String address, String name)> devices,
+  List<(String address, String name, bool paired, bool connected)> devices,
 ) {
   _writeUint32(b, devices.length);
   for (final device in devices) {
     _writeString(b, device.$1);
     _writeString(b, device.$2);
+    _writeBool(b, device.$3);
+    _writeBool(b, device.$4);
   }
 }
 
@@ -379,14 +381,14 @@ void main() {
       expect(error.message, 'Transfer failed');
     });
 
-    test('decodes BlueZPairedDevices', () {
+    test('decodes BlueZDevices', () {
       final b = BytesBuilder();
-      _writePairedDevices(b, [
-        ('AA:BB:CC:DD:EE:FF', 'Pixel'),
-        ('11:22:33:44:55:66', 'Headset'),
+      _writeDevices(b, [
+        ('AA:BB:CC:DD:EE:FF', 'Pixel', true, true),
+        ('11:22:33:44:55:66', 'Headset', false, false),
       ]);
 
-      final result = GlazeCodec.decode<BlueZPairedDevices>(
+      final result = GlazeCodec.decode<BlueZDevices>(
         Uint8List.fromList(b.toBytes()),
         0,
       );
@@ -394,8 +396,12 @@ void main() {
       expect(result.devices.length, 2);
       expect(result.devices[0].address, 'AA:BB:CC:DD:EE:FF');
       expect(result.devices[0].name, 'Pixel');
+      expect(result.devices[0].paired, true);
+      expect(result.devices[0].connected, true);
       expect(result.devices[1].address, '11:22:33:44:55:66');
       expect(result.devices[1].name, 'Headset');
+      expect(result.devices[1].paired, false);
+      expect(result.devices[1].connected, false);
     });
 
     test('throws on unknown type', () {

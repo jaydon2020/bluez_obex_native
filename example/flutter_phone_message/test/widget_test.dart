@@ -10,5 +10,6 @@ void main() {
     expect(find.text('Simulated endpoint'), findsOneWidget);
     expect(find.byIcon(Icons.contacts), findsOneWidget);
     expect(find.byIcon(Icons.inbox), findsOneWidget);
+    expect(find.text('Connect'), findsNothing);
   });
 }

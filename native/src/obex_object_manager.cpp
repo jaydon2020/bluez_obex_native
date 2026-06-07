@@ -180,20 +180,6 @@ ObexObjectManager::extract_transfer_props(const std::string &object_path,
 }
 
 template <typename T>
-T ObexObjectManager::get_prop(const PropertiesMap &props,
-                              const std::string &key, const T &fallback) {
-  auto it = props.find(key);
-  if (it == props.end()) {
-    return fallback;
-  }
-  try {
-    return it->second.get<T>();
-  } catch (...) {
-    return fallback;
-  }
-}
-
-template <typename T>
 void ObexObjectManager::post_glaze(uint8_t discriminator, const T &value) {
   post_bytes(discriminator, glz::encode(value));
 }

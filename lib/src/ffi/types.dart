@@ -212,15 +212,22 @@ class BlueZObexError {
   });
 }
 
-class BlueZPairedDevice {
+class BlueZDevice {
   final String address;
   final String name;
+  final bool paired;
+  final bool connected;
 
-  const BlueZPairedDevice({required this.address, required this.name});
+  const BlueZDevice({
+    required this.address,
+    required this.name,
+    this.paired = false,
+    this.connected = false,
+  });
 }
 
-class BlueZPairedDevices {
-  final List<BlueZPairedDevice> devices;
+class BlueZDevices {
+  final List<BlueZDevice> devices;
 
-  const BlueZPairedDevices({this.devices = const []});
+  const BlueZDevices({this.devices = const []});
 }

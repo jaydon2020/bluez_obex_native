@@ -11,8 +11,9 @@ The app mirrors the sibling example apps in this workspace:
 It supports two modes:
 
 * **Simulated endpoint**: default, no Bluetooth hardware required.
-* **Physical BlueZ OBEX**: disable the toggle, refresh paired devices, choose a
-  phone from the dropdown, and use `org.bluez.obex` on the session bus.
+* **Physical BlueZ OBEX**: connect the phone in system Bluetooth settings,
+  disable the toggle, refresh BlueZ devices, choose a phone, then sync contacts
+  or list the inbox. The app creates the needed OBEX session for each action.
 
 Run:
 

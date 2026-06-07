@@ -247,20 +247,24 @@ template <> struct glz::meta<BlueZObexError> {
                       glz::field("name", &BlueZObexError::name),
                       glz::field("message", &BlueZObexError::message));
 };
-struct BlueZPairedDevice {
+struct BlueZDevice {
   std::string address;
   std::string name;
+  bool paired{};
+  bool connected{};
 };
-template <> struct glz::meta<BlueZPairedDevice> {
+template <> struct glz::meta<BlueZDevice> {
   static constexpr auto fields =
-      std::make_tuple(glz::field("address", &BlueZPairedDevice::address),
-                      glz::field("name", &BlueZPairedDevice::name));
+      std::make_tuple(glz::field("address", &BlueZDevice::address),
+                      glz::field("name", &BlueZDevice::name),
+                      glz::field("paired", &BlueZDevice::paired),
+                      glz::field("connected", &BlueZDevice::connected));
 };
 
-struct BlueZPairedDevices {
-  std::vector<BlueZPairedDevice> devices;
+struct BlueZDevices {
+  std::vector<BlueZDevice> devices;
 };
-template <> struct glz::meta<BlueZPairedDevices> {
+template <> struct glz::meta<BlueZDevices> {
   static constexpr auto fields =
-      std::make_tuple(glz::field("devices", &BlueZPairedDevices::devices));
+      std::make_tuple(glz::field("devices", &BlueZDevices::devices));
 };

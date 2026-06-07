@@ -14,8 +14,7 @@ extern "C" {
 
 // ── Client lifecycle ────────────────────────────────────────────────────────
 
-FFI_PLUGIN_EXPORT int bluez_obex_get_paired_devices(uint8_t *out,
-                                                    uint32_t capacity);
+FFI_PLUGIN_EXPORT int bluez_obex_get_devices(uint8_t *out, int32_t capacity);
 
 FFI_PLUGIN_EXPORT void bluez_obex_init(void *dart_api_dl_data);
 FFI_PLUGIN_EXPORT void *bluez_obex_client_create(int64_t events_port);

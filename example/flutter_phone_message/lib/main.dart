@@ -39,7 +39,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   BlueZObexClient? _client;
   BlueZObexSession? _session;
   StreamSubscription<BlueZObexEvent>? _eventSubscription;
-  List<BlueZPairedDevice> _devices = const [];
+  List<BlueZDevice> _devices = const [];
   String? _selectedAddress;
   List<BlueZObexPhonebookEntry> _contacts = const [];
   List<BlueZObexMessage> _messages = const [];
@@ -81,79 +81,88 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     }
   }
 
-  Future<void> _connect() async {
-    await _client?.dispose();
-    await _eventSubscription?.cancel();
+  Future<BlueZObexClient> _ensureClient() async {
+    final existing = _client;
+    if (existing != null) {
+      return existing;
+    }
+
     _workspace ??= await Directory.systemTemp.createTemp('phone_message_');
     final client = _simulated
         ? await BlueZObexClient.simulated(outputDirectory: _workspace)
         : await BlueZObexClient.connect();
-    final devices = _simulated || _devices.isEmpty
-        ? await client.getPairedDevices()
-        : _devices;
-    final selectedAddress =
-        _selectedAddress != null &&
-            devices.any((device) => device.address == _selectedAddress)
-        ? _selectedAddress!
-        : devices.isNotEmpty
-        ? devices.first.address
-        : _addressController.text.trim();
-    _addressController.text = selectedAddress;
-    final session = await client.createSession(selectedAddress, target: 'pbap');
     _eventSubscription = client.events.listen((event) {
       if (mounted) {
         setState(() => _prependLog('event ${event.type.name}'));
       }
     });
-
     setState(() {
       _client = client;
+    });
+    return client;
+  }
+
+  Future<BlueZObexSession> _createSession(String target) async {
+    final client = await _ensureClient();
+    final address = _selectedAddress ?? _addressController.text.trim();
+    if (address.isEmpty) {
+      throw StateError('Choose or enter a Bluetooth address first');
+    }
+    final BlueZObexSession session;
+    try {
+      session = await client.createSession(address, target: target);
+    } on BlueZObexNativeException catch (error) {
+      final profile = target == 'map' ? 'MAP messages' : 'PBAP contacts';
+      throw StateError(
+        'Could not start $profile for $address. Connect the phone in system '
+        'Bluetooth settings and make sure it supports this OBEX profile. '
+        'Native error: $error',
+      );
+    }
+    setState(() {
       _session = session;
+      _prependLog('$target session ${session.objectPath}');
+    });
+    return session;
+  }
+
+  Future<void> _refreshDevices() async {
+    final devices = await BlueZObexClient.devices(simulated: _simulated);
+    final selectedAddress =
+        _selectedAddress != null &&
+            devices.any((device) => device.address == _selectedAddress)
+        ? _selectedAddress
+        : devices.isNotEmpty
+        ? devices.first.address
+        : null;
+    if (selectedAddress != null) {
+      _addressController.text = selectedAddress;
+    }
+    setState(() {
       _devices = devices;
       _selectedAddress = selectedAddress;
+      _prependLog('found ${devices.length} BlueZ device(s)');
+    });
+  }
+
+  void _setSimulated(bool value) {
+    _eventSubscription?.cancel().ignore();
+    _client?.dispose().ignore();
+    setState(() {
+      _simulated = value;
+      _client = null;
+      _session = null;
+      _devices = const [];
+      _selectedAddress = null;
       _contacts = const [];
       _messages = const [];
       _contactsFile = null;
       _messageFile = null;
-      _prependLog('session ${session.objectPath}');
     });
   }
 
-  Future<void> _refreshDevices() async {
-    BlueZObexClient? temporaryClient;
-    final client =
-        _client ??
-        (_simulated
-            ? await BlueZObexClient.simulated(outputDirectory: _workspace)
-            : await BlueZObexClient.connect());
-    if (_client == null) {
-      temporaryClient = client;
-    }
-
-    try {
-      final devices = await client.getPairedDevices();
-      final selectedAddress =
-          _selectedAddress != null &&
-              devices.any((device) => device.address == _selectedAddress)
-          ? _selectedAddress
-          : devices.isNotEmpty
-          ? devices.first.address
-          : null;
-      if (selectedAddress != null) {
-        _addressController.text = selectedAddress;
-      }
-      setState(() {
-        _devices = devices;
-        _selectedAddress = selectedAddress;
-        _prependLog('found ${devices.length} device(s)');
-      });
-    } finally {
-      await temporaryClient?.dispose();
-    }
-  }
-
   Future<void> _syncContacts() async {
-    final session = _requireSession();
+    final session = await _createSession('pbap');
     final phonebook = session.phonebook;
     await phonebook.select('int', 'pb');
     final contacts = await phonebook.list(filters: {'MaxCount': 50});
@@ -167,7 +176,8 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   }
 
   Future<void> _loadInbox() async {
-    final access = _requireSession().messageAccess;
+    final session = await _createSession('map');
+    final access = session.messageAccess;
     await access.setFolder('inbox');
     final messages = await access.listMessages('inbox');
     setState(() {
@@ -445,17 +455,9 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   BlueZObexClient _requireClient() {
     final client = _client;
     if (client == null) {
-      throw StateError('Connect to a phone first');
+      throw StateError('Start a transfer first');
     }
     return client;
-  }
-
-  BlueZObexSession _requireSession() {
-    final session = _session;
-    if (session == null) {
-      throw StateError('Connect to a phone first');
-    }
-    return session;
   }
 
   void _prependLog(String message) {
@@ -467,18 +469,8 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
 
   @override
   Widget build(BuildContext context) {
-    final sessionReady = _session != null;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Phone Message'),
-        actions: [
-          IconButton(
-            tooltip: 'Connect',
-            onPressed: _busy ? null : () => _run('connect', _connect),
-            icon: const Icon(Icons.bluetooth_connected),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Phone Message')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -488,7 +480,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
             busy: _busy,
             devices: _devices,
             selectedAddress: _selectedAddress,
-            onSimulatedChanged: (value) => setState(() => _simulated = value),
+            onSimulatedChanged: _setSimulated,
             onRefreshDevices: () => _run('refresh devices', _refreshDevices),
             onDeviceSelected: (value) {
               if (value == null) {
@@ -499,7 +491,6 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
                 _addressController.text = value;
               });
             },
-            onConnect: () => _run('connect', _connect),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -507,16 +498,14 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
             runSpacing: 8,
             children: [
               FilledButton.icon(
-                onPressed: _busy || !sessionReady
+                onPressed: _busy
                     ? null
                     : () => _run('sync contacts', _syncContacts),
                 icon: const Icon(Icons.contacts),
                 label: const Text('Sync contacts'),
               ),
               FilledButton.tonalIcon(
-                onPressed: _busy || !sessionReady
-                    ? null
-                    : () => _run('list inbox', _loadInbox),
+                onPressed: _busy ? null : () => _run('list inbox', _loadInbox),
                 icon: const Icon(Icons.inbox),
                 label: const Text('List inbox'),
               ),
@@ -586,12 +575,11 @@ class _ConnectionPanel extends StatelessWidget {
   final TextEditingController addressController;
   final bool simulated;
   final bool busy;
-  final List<BlueZPairedDevice> devices;
+  final List<BlueZDevice> devices;
   final String? selectedAddress;
   final ValueChanged<bool> onSimulatedChanged;
   final VoidCallback onRefreshDevices;
   final ValueChanged<String?> onDeviceSelected;
-  final VoidCallback onConnect;
 
   const _ConnectionPanel({
     required this.addressController,
@@ -602,7 +590,6 @@ class _ConnectionPanel extends StatelessWidget {
     required this.onSimulatedChanged,
     required this.onRefreshDevices,
     required this.onDeviceSelected,
-    required this.onConnect,
   });
 
   @override
@@ -629,19 +616,22 @@ class _ConnectionPanel extends StatelessWidget {
                   for (final device in devices)
                     DropdownMenuItem(
                       value: device.address,
-                      child: Text('${device.name} (${device.address})'),
+                      child: Text(
+                        '${device.name} (${device.address})'
+                        '${device.connected ? ' connected' : ''}',
+                      ),
                     ),
                 ],
                 onChanged: busy || devices.isEmpty ? null : onDeviceSelected,
                 decoration: const InputDecoration(
-                  labelText: 'Paired device',
+                  labelText: 'BlueZ device',
                   border: OutlineInputBorder(),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             IconButton.filledTonal(
-              tooltip: 'Refresh paired devices',
+              tooltip: 'Refresh BlueZ devices',
               onPressed: busy ? null : onRefreshDevices,
               icon: const Icon(Icons.refresh),
             ),
@@ -655,12 +645,6 @@ class _ConnectionPanel extends StatelessWidget {
             labelText: 'Bluetooth address',
             border: OutlineInputBorder(),
           ),
-        ),
-        const SizedBox(height: 8),
-        FilledButton.icon(
-          onPressed: busy ? null : onConnect,
-          icon: const Icon(Icons.bluetooth_searching),
-          label: const Text('Connect'),
         ),
       ],
     );
@@ -770,7 +754,7 @@ class _SummaryPanel extends StatelessWidget {
           children: [
             Text('Session', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text(session?.objectPath ?? 'Not connected'),
+            Text(session?.objectPath ?? 'No OBEX session yet'),
             const Divider(),
             Text('Contacts synced: $contactsCount'),
             Text('Messages listed: $messagesCount'),

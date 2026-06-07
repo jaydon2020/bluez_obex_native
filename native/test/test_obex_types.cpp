@@ -285,6 +285,35 @@ void test_object_manager_roundtrips() {
   assert(decoded_removed.interfaceName == removed.interfaceName);
 }
 
+void test_devices_roundtrip() {
+  BlueZDevices orig;
+  orig.devices = {
+      {.address = "AA:BB:CC:DD:EE:FF",
+       .name = "Pixel",
+       .paired = true,
+       .connected = true},
+      {.address = "11:22:33:44:55:66",
+       .name = "Headset",
+       .paired = false,
+       .connected = false},
+  };
+
+  auto buf = glz::encode(orig);
+  BlueZDevices decoded;
+  auto end = glz::decode(buf.data(), 0, decoded);
+
+  assert(end == buf.size());
+  assert(decoded.devices.size() == 2u);
+  assert(decoded.devices[0].address == "AA:BB:CC:DD:EE:FF");
+  assert(decoded.devices[0].name == "Pixel");
+  assert(decoded.devices[0].paired);
+  assert(decoded.devices[0].connected);
+  assert(decoded.devices[1].address == "11:22:33:44:55:66");
+  assert(decoded.devices[1].name == "Headset");
+  assert(!decoded.devices[1].paired);
+  assert(!decoded.devices[1].connected);
+}
+
 void test_error_roundtrip() {
   BlueZObexError orig;
   orig.objectPath = "/org/bluez/obex/client/session0";
@@ -450,6 +479,7 @@ int main() {
   test_filter_fields_roundtrip();
   test_transfer_result_roundtrip();
   test_object_manager_roundtrips();
+  test_devices_roundtrip();
   test_error_roundtrip();
   test_object_manager_extract_session_props();
   test_object_manager_extract_transfer_props();

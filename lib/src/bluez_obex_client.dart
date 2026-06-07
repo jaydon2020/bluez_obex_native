@@ -15,7 +15,7 @@ import 'native_bridge.dart';
 abstract class BlueZObexBackend {
   Stream<BlueZObexEvent> get events;
 
-  Future<List<BlueZPairedDevice>> getPairedDevices();
+  Future<List<BlueZDevice>> getDevices();
   Future<BlueZObexManagedObjects> getManagedObjects();
   Future<BlueZObexSessionProps> createSession(
     String destination, {
@@ -99,11 +99,19 @@ class BlueZObexClient {
     );
   }
 
+  /// Query BlueZ System Bus devices without creating an OBEX session.
+  static Future<List<BlueZDevice>> devices({bool simulated = false}) async {
+    if (simulated) {
+      return SimulatedBlueZObexBackend.simulatedDevices;
+    }
+    return NativeBlueZObexBackend.queryDevices();
+  }
+
   /// ObjectManager and property-change events emitted by the backend.
   Stream<BlueZObexEvent> get events => _backend.events;
 
-  Future<List<BlueZPairedDevice>> getPairedDevices() {
-    return _backend.getPairedDevices();
+  Future<List<BlueZDevice>> getDevices() {
+    return _backend.getDevices();
   }
 
   Future<BlueZObexManagedObjects> getManagedObjects() {
@@ -323,6 +331,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
   final BlueZObexNativeBridge _bridge;
   final ReceivePort _receivePort;
   final StreamController<BlueZObexEvent> _eventsController;
+  bool _disposed = false;
 
   NativeBlueZObexBackend._(
     this._bridge,
@@ -361,13 +370,17 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
   @override
   Stream<BlueZObexEvent> get events => _eventsController.stream;
 
-  @override
-  Future<List<BlueZPairedDevice>> getPairedDevices() async {
-    final result = _bridge.readGlaze<BlueZPairedDevices>(
-      'bluez_obex_get_paired_devices',
-      nativeBindings.bluez_obex_get_paired_devices,
+  static Future<List<BlueZDevice>> queryDevices() async {
+    final result = readNativeGlaze<BlueZDevices>(
+      'bluez_obex_get_devices',
+      nativeBindings.bluez_obex_get_devices,
     );
     return result.devices;
+  }
+
+  @override
+  Future<List<BlueZDevice>> getDevices() async {
+    return NativeBlueZObexBackend.queryDevices();
   }
 
   @override
@@ -882,6 +895,10 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
 
   @override
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     _bridge.dispose();
     _receivePort.close();
     await _eventsController.close();
@@ -890,6 +907,15 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
 
 /// In-process endpoint that mirrors the BlueZ OBEX API for tests and examples.
 class SimulatedBlueZObexBackend implements BlueZObexBackend {
+  static const simulatedDevices = [
+    BlueZDevice(
+      address: 'AA:BB:CC:DD:EE:FF',
+      name: 'Simulated phone',
+      paired: true,
+      connected: true,
+    ),
+  ];
+
   final Directory outputDirectory;
   final StreamController<BlueZObexEvent> _eventsController =
       StreamController<BlueZObexEvent>.broadcast();
@@ -900,6 +926,7 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
     BlueZObexPhonebookEntry(vcard: '1.vcf', name: 'Ada Lovelace'),
     BlueZObexPhonebookEntry(vcard: '2.vcf', name: 'Grace Hopper'),
   ];
+  bool _disposed = false;
   int _sessionCounter = 0;
   int _transferCounter = 0;
 
@@ -914,10 +941,8 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
   Stream<BlueZObexEvent> get events => _eventsController.stream;
 
   @override
-  Future<List<BlueZPairedDevice>> getPairedDevices() async {
-    return const [
-      BlueZPairedDevice(address: 'AA:BB:CC:DD:EE:FF', name: 'Simulated phone'),
-    ];
+  Future<List<BlueZDevice>> getDevices() async {
+    return simulatedDevices;
   }
 
   @override
@@ -1180,6 +1205,10 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
 
   @override
   Future<void> dispose() {
+    if (_disposed) {
+      return Future.value();
+    }
+    _disposed = true;
     return _eventsController.close();
   }
 

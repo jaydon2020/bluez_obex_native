@@ -43,8 +43,8 @@ class GlazeCodec {
       return _decodeObexObjectRemoved(r) as T;
     } else if (T == BlueZObexError) {
       return _decodeObexError(r) as T;
-    } else if (T == BlueZPairedDevices) {
-      return _decodePairedDevices(r) as T;
+    } else if (T == BlueZDevices) {
+      return _decodeDevices(r) as T;
     }
     throw ArgumentError('Unknown type: $T');
   }
@@ -169,8 +169,8 @@ class GlazeCodec {
     );
   }
 
-  static BlueZPairedDevices _decodePairedDevices(_Reader r) {
-    return BlueZPairedDevices(devices: r.readPairedDeviceList());
+  static BlueZDevices _decodeDevices(_Reader r) {
+    return BlueZDevices(devices: r.readDeviceList());
   }
 }
 
@@ -270,11 +270,16 @@ class _Reader {
     return v;
   }
 
-  List<BlueZPairedDevice> readPairedDeviceList() {
+  List<BlueZDevice> readDeviceList() {
     final count = _readUint32();
     return List.generate(
       count,
-      (_) => BlueZPairedDevice(address: readString(), name: readString()),
+      (_) => BlueZDevice(
+        address: readString(),
+        name: readString(),
+        paired: readBool(),
+        connected: readBool(),
+      ),
     );
   }
 }
