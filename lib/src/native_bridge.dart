@@ -53,6 +53,25 @@ class BlueZObexNativeBridge {
     return GlazeCodec.decode<T>(readBytes(operation, call), 0);
   }
 
+  Uint8List readBytesOnce(
+    String operation,
+    int Function(ffi.Pointer<ffi.Uint8> out, int capacity) call, {
+    int capacity = 64 * 1024,
+  }) {
+    return readNativeBytesOnce(operation, call, capacity: capacity);
+  }
+
+  T readGlazeOnce<T>(
+    String operation,
+    int Function(ffi.Pointer<ffi.Uint8> out, int capacity) call, {
+    int capacity = 64 * 1024,
+  }) {
+    return GlazeCodec.decode<T>(
+      readBytesOnce(operation, call, capacity: capacity),
+      0,
+    );
+  }
+
   String readUtf8(
     String operation,
     int Function(ffi.Pointer<ffi.Uint8> out, int capacity) call,
@@ -82,6 +101,24 @@ Uint8List readNativeBytes(
   final out = calloc<ffi.Uint8>(needed);
   try {
     final written = call(out, needed);
+    _checkResult(operation, written, allowZero: true);
+    return Uint8List.fromList(out.asTypedList(written));
+  } finally {
+    calloc.free(out);
+  }
+}
+
+Uint8List readNativeBytesOnce(
+  String operation,
+  int Function(ffi.Pointer<ffi.Uint8> out, int capacity) call, {
+  int capacity = 64 * 1024,
+}) {
+  final out = calloc<ffi.Uint8>(capacity);
+  try {
+    final written = call(out, capacity);
+    if (written == -2) {
+      throw BlueZObexNativeException('$operation buffer too small', written);
+    }
     _checkResult(operation, written, allowZero: true);
     return Uint8List.fromList(out.asTypedList(written));
   } finally {

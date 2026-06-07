@@ -44,7 +44,8 @@ BlueZDevices BluezDeviceRegistry::get_devices() {
         {.address = std::move(address),
          .name = std::move(name),
          .paired = get_bool_property(properties, "Paired"),
-         .connected = get_bool_property(properties, "Connected")});
+         .connected = get_bool_property(properties, "Connected"),
+         .uuids = get_string_list_property(properties, "UUIDs")});
   }
   return result;
 }
@@ -72,6 +73,20 @@ BluezDeviceRegistry::get_string_property(const PropertiesMap &properties,
   }
   try {
     return it->second.get<std::string>();
+  } catch (const std::exception &) {
+    return {};
+  }
+}
+
+std::vector<std::string>
+BluezDeviceRegistry::get_string_list_property(const PropertiesMap &properties,
+                                              const std::string &key) {
+  const auto it = properties.find(key);
+  if (it == properties.end()) {
+    return {};
+  }
+  try {
+    return it->second.get<std::vector<std::string>>();
   } catch (const std::exception &) {
     return {};
   }

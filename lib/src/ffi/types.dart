@@ -217,13 +217,19 @@ class BlueZDevice {
   final String name;
   final bool paired;
   final bool connected;
+  final List<String> uuids;
 
   const BlueZDevice({
     required this.address,
     required this.name,
     this.paired = false,
     this.connected = false,
+    this.uuids = const [],
   });
+
+  bool supportsProfileUuid(String uuid) {
+    return uuids.any((candidate) => candidate.toLowerCase() == uuid);
+  }
 }
 
 class BlueZDevices {

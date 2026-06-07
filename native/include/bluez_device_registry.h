@@ -20,4 +20,7 @@ private:
                                 const std::string &key, bool fallback = false);
   static std::string get_string_property(const PropertiesMap &properties,
                                          const std::string &key);
+  static std::vector<std::string>
+  get_string_list_property(const PropertiesMap &properties,
+                           const std::string &key);
 };

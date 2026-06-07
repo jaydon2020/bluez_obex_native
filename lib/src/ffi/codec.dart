@@ -279,6 +279,7 @@ class _Reader {
         name: readString(),
         paired: readBool(),
         connected: readBool(),
+        uuids: readStringList(),
       ),
     );
   }

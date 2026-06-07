@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:bluez_obex_native/bluez_obex_native.dart';
 import 'package:flutter/material.dart';
+
+const _pbapUuid = '0000112f-0000-1000-8000-00805f9b34fb';
+const _mapUuid = '00001132-0000-1000-8000-00805f9b34fb';
 
 void main() {
   runApp(const FlutterPhoneMessageApp());
@@ -47,6 +52,39 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   bool _busy = false;
   String? _contactsFile;
   String? _messageFile;
+
+  BlueZDevice? get _selectedDevice {
+    final selectedAddress = _selectedAddress;
+    if (selectedAddress == null) {
+      return null;
+    }
+    for (final device in _devices) {
+      if (device.address == selectedAddress) {
+        return device;
+      }
+    }
+    return null;
+  }
+
+  bool get _canUsePbap {
+    if (_simulated) {
+      return true;
+    }
+    final device = _selectedDevice;
+    return device != null &&
+        device.connected &&
+        device.supportsProfileUuid(_pbapUuid);
+  }
+
+  bool get _canUseMap {
+    if (_simulated) {
+      return true;
+    }
+    final device = _selectedDevice;
+    return device != null &&
+        device.connected &&
+        device.supportsProfileUuid(_mapUuid);
+  }
 
   @override
   void dispose() {
@@ -103,16 +141,36 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   }
 
   Future<BlueZObexSession> _createSession(String target) async {
-    final client = await _ensureClient();
-    final address = _selectedAddress ?? _addressController.text.trim();
-    if (address.isEmpty) {
+    final profile = target == 'map' ? 'MAP messages' : 'PBAP contacts';
+    final requiredUuid = target == 'map' ? _mapUuid : _pbapUuid;
+    final address = _simulated
+        ? (_selectedAddress ?? _addressController.text.trim())
+        : _selectedDevice?.address;
+    if (address == null || address.isEmpty) {
       throw StateError('Choose or enter a Bluetooth address first');
     }
+    if (!_simulated) {
+      final device = _selectedDevice;
+      if (device == null) {
+        throw StateError('Choose a discovered BlueZ device first');
+      }
+      if (!device.connected) {
+        throw StateError(
+          '${device.name} is not connected. Connect it in system Bluetooth '
+          'settings before using $profile.',
+        );
+      }
+      if (!device.supportsProfileUuid(requiredUuid)) {
+        throw StateError(
+          '${device.name} is connected, but it does not advertise $profile.',
+        );
+      }
+    }
+    final client = await _ensureClient();
     final BlueZObexSession session;
     try {
       session = await client.createSession(address, target: target);
     } on BlueZObexNativeException catch (error) {
-      final profile = target == 'map' ? 'MAP messages' : 'PBAP contacts';
       throw StateError(
         'Could not start $profile for $address. Connect the phone in system '
         'Bluetooth settings and make sure it supports this OBEX profile. '
@@ -128,10 +186,13 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
 
   Future<void> _refreshDevices() async {
     final devices = await BlueZObexClient.devices(simulated: _simulated);
+    final connectedDevices = devices.where((device) => device.connected);
     final selectedAddress =
         _selectedAddress != null &&
             devices.any((device) => device.address == _selectedAddress)
         ? _selectedAddress
+        : connectedDevices.isNotEmpty
+        ? connectedDevices.first.address
         : devices.isNotEmpty
         ? devices.first.address
         : null;
@@ -165,7 +226,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     final session = await _createSession('pbap');
     final phonebook = session.phonebook;
     await phonebook.select('int', 'pb');
-    final contacts = await phonebook.list(filters: {'MaxCount': 50});
+    final contacts = await phonebook.list();
     final targetFile = '${_workspace!.path}/contacts.vcf';
     await _waitForTransferComplete(() => phonebook.pullAll(targetFile));
     setState(() {
@@ -178,8 +239,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   Future<void> _loadInbox() async {
     final session = await _createSession('map');
     final access = session.messageAccess;
-    await access.setFolder('inbox');
-    final messages = await access.listMessages('inbox');
+    final messages = await access.listMessages('telecom/msg/inbox');
     setState(() {
       _messages = messages;
       _prependLog('loaded ${messages.length} inbox message(s)');
@@ -237,7 +297,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     final parsed = _parseVCardFields(block);
     return [
       for (final field in [...fields, ...parsed])
-        if (field.value.trim().isNotEmpty) field,
+        if (field.hasContent) field,
     ];
   }
 
@@ -304,6 +364,14 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       }
 
       final rawValue = _decodeVCardValue(line.substring(separator + 1));
+      final imageBytes = _decodeVCardImage(rawName, rawValue);
+      if (imageBytes != null) {
+        fields.add(
+          _ContactField.image(_vCardLabel(rawName, metadata), imageBytes),
+        );
+        continue;
+      }
+
       final value = switch (rawName) {
         'ADR' =>
           rawValue.split(';').where((part) => part.isNotEmpty).join(', '),
@@ -313,6 +381,21 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       fields.add(_ContactField(_vCardLabel(rawName, metadata), value));
     }
     return fields;
+  }
+
+  Uint8List? _decodeVCardImage(String name, String value) {
+    if (name != 'PHOTO' && name != 'LOGO') {
+      return null;
+    }
+    final normalized = value.replaceAll(RegExp(r'\s+'), '');
+    if (normalized.isEmpty) {
+      return null;
+    }
+    try {
+      return base64Decode(normalized);
+    } on FormatException {
+      return null;
+    }
   }
 
   List<String> _unfoldVCardLines(List<String> lines) {
@@ -351,6 +434,8 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       'BDAY' => 'Birthday',
       'NOTE' => 'Note',
       'UID' => 'UID',
+      'PHOTO' => 'Photo',
+      'LOGO' => 'Logo',
       _ => name,
     };
     final type = _vCardType(metadata);
@@ -480,6 +565,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
             busy: _busy,
             devices: _devices,
             selectedAddress: _selectedAddress,
+            selectedDevice: _selectedDevice,
             onSimulatedChanged: _setSimulated,
             onRefreshDevices: () => _run('refresh devices', _refreshDevices),
             onDeviceSelected: (value) {
@@ -498,14 +584,16 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
             runSpacing: 8,
             children: [
               FilledButton.icon(
-                onPressed: _busy
+                onPressed: _busy || !_canUsePbap
                     ? null
                     : () => _run('sync contacts', _syncContacts),
                 icon: const Icon(Icons.contacts),
                 label: const Text('Sync contacts'),
               ),
               FilledButton.tonalIcon(
-                onPressed: _busy ? null : () => _run('list inbox', _loadInbox),
+                onPressed: _busy || !_canUseMap
+                    ? null
+                    : () => _run('list inbox', _loadInbox),
                 icon: const Icon(Icons.inbox),
                 label: const Text('List inbox'),
               ),
@@ -577,6 +665,7 @@ class _ConnectionPanel extends StatelessWidget {
   final bool busy;
   final List<BlueZDevice> devices;
   final String? selectedAddress;
+  final BlueZDevice? selectedDevice;
   final ValueChanged<bool> onSimulatedChanged;
   final VoidCallback onRefreshDevices;
   final ValueChanged<String?> onDeviceSelected;
@@ -587,6 +676,7 @@ class _ConnectionPanel extends StatelessWidget {
     required this.busy,
     required this.devices,
     required this.selectedAddress,
+    required this.selectedDevice,
     required this.onSimulatedChanged,
     required this.onRefreshDevices,
     required this.onDeviceSelected,
@@ -616,10 +706,7 @@ class _ConnectionPanel extends StatelessWidget {
                   for (final device in devices)
                     DropdownMenuItem(
                       value: device.address,
-                      child: Text(
-                        '${device.name} (${device.address})'
-                        '${device.connected ? ' connected' : ''}',
-                      ),
+                      child: Text(_deviceLabel(device)),
                     ),
                 ],
                 onChanged: busy || devices.isEmpty ? null : onDeviceSelected,
@@ -640,22 +727,62 @@ class _ConnectionPanel extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: addressController,
-          enabled: !busy,
+          enabled: simulated && !busy,
           decoration: const InputDecoration(
             labelText: 'Bluetooth address',
             border: OutlineInputBorder(),
           ),
         ),
+        if (!simulated) ...[
+          const SizedBox(height: 8),
+          Text(_deviceStatusText(selectedDevice)),
+        ],
       ],
     );
+  }
+
+  String _deviceStatusText(BlueZDevice? device) {
+    if (device == null) {
+      return 'Refresh and choose a connected phone';
+    }
+    if (!device.connected) {
+      return '${device.name} is not connected';
+    }
+    final hasPbap = device.supportsProfileUuid(_pbapUuid);
+    final hasMap = device.supportsProfileUuid(_mapUuid);
+    if (hasPbap && hasMap) {
+      return '${device.name} is connected and supports contacts and inbox';
+    }
+    if (hasPbap) {
+      return '${device.name} is connected and supports contacts only';
+    }
+    if (hasMap) {
+      return '${device.name} is connected and supports inbox only';
+    }
+    return '${device.name} is connected but does not advertise contacts or inbox';
+  }
+
+  String _deviceLabel(BlueZDevice device) {
+    final state = device.connected ? 'connected' : 'disconnected';
+    final profiles = [
+      if (device.supportsProfileUuid(_pbapUuid)) 'contacts',
+      if (device.supportsProfileUuid(_mapUuid)) 'inbox',
+    ].join('/');
+    final suffix = profiles.isEmpty ? state : '$state, $profiles';
+    return '${device.name} (${device.address}) - $suffix';
   }
 }
 
 class _ContactField {
   final String label;
   final String value;
+  final Uint8List? imageBytes;
 
-  const _ContactField(this.label, this.value);
+  const _ContactField(this.label, this.value) : imageBytes = null;
+
+  const _ContactField.image(this.label, this.imageBytes) : value = '';
+
+  bool get hasContent => imageBytes != null || value.trim().isNotEmpty;
 }
 
 class _ContactDetailSheet extends StatelessWidget {
@@ -710,7 +837,19 @@ class _ContactDetailSheet extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 3),
-                          SelectableText(field.value),
+                          if (field.imageBytes case final imageBytes?)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                imageBytes,
+                                width: 160,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Text('Could not decode image'),
+                              ),
+                            )
+                          else
+                            SelectableText(field.value),
                         ],
                       ),
                     );

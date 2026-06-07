@@ -252,13 +252,15 @@ struct BlueZDevice {
   std::string name;
   bool paired{};
   bool connected{};
+  std::vector<std::string> uuids;
 };
 template <> struct glz::meta<BlueZDevice> {
   static constexpr auto fields =
       std::make_tuple(glz::field("address", &BlueZDevice::address),
                       glz::field("name", &BlueZDevice::name),
                       glz::field("paired", &BlueZDevice::paired),
-                      glz::field("connected", &BlueZDevice::connected));
+                      glz::field("connected", &BlueZDevice::connected),
+                      glz::field("uuids", &BlueZDevice::uuids));
 };
 
 struct BlueZDevices {

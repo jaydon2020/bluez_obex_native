@@ -48,7 +48,16 @@ void _writeStringList(BytesBuilder b, List<String> values) {
 
 void _writeDevices(
   BytesBuilder b,
-  List<(String address, String name, bool paired, bool connected)> devices,
+  List<
+    (
+      String address,
+      String name,
+      bool paired,
+      bool connected,
+      List<String> uuids,
+    )
+  >
+  devices,
 ) {
   _writeUint32(b, devices.length);
   for (final device in devices) {
@@ -56,6 +65,7 @@ void _writeDevices(
     _writeString(b, device.$2);
     _writeBool(b, device.$3);
     _writeBool(b, device.$4);
+    _writeStringList(b, device.$5);
   }
 }
 
@@ -384,8 +394,14 @@ void main() {
     test('decodes BlueZDevices', () {
       final b = BytesBuilder();
       _writeDevices(b, [
-        ('AA:BB:CC:DD:EE:FF', 'Pixel', true, true),
-        ('11:22:33:44:55:66', 'Headset', false, false),
+        (
+          'AA:BB:CC:DD:EE:FF',
+          'Pixel',
+          true,
+          true,
+          ['0000112f-0000-1000-8000-00805f9b34fb'],
+        ),
+        ('11:22:33:44:55:66', 'Headset', false, false, <String>[]),
       ]);
 
       final result = GlazeCodec.decode<BlueZDevices>(
@@ -398,10 +414,12 @@ void main() {
       expect(result.devices[0].name, 'Pixel');
       expect(result.devices[0].paired, true);
       expect(result.devices[0].connected, true);
+      expect(result.devices[0].uuids, ['0000112f-0000-1000-8000-00805f9b34fb']);
       expect(result.devices[1].address, '11:22:33:44:55:66');
       expect(result.devices[1].name, 'Headset');
       expect(result.devices[1].paired, false);
       expect(result.devices[1].connected, false);
+      expect(result.devices[1].uuids, isEmpty);
     });
 
     test('throws on unknown type', () {

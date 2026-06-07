@@ -54,8 +54,7 @@ void main() {
       final folders = await messageAccess.listFolders();
       expect(folders.map((folder) => folder.name), contains('inbox'));
 
-      await messageAccess.setFolder('inbox');
-      final messages = await messageAccess.listMessages('inbox');
+      final messages = await messageAccess.listMessages('telecom/msg/inbox');
       expect(messages, hasLength(1));
 
       final message = messages.single;

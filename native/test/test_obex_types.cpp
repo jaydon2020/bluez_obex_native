@@ -291,11 +291,13 @@ void test_devices_roundtrip() {
       {.address = "AA:BB:CC:DD:EE:FF",
        .name = "Pixel",
        .paired = true,
-       .connected = true},
+       .connected = true,
+       .uuids = {"0000112f-0000-1000-8000-00805f9b34fb"}},
       {.address = "11:22:33:44:55:66",
        .name = "Headset",
        .paired = false,
-       .connected = false},
+       .connected = false,
+       .uuids = {}},
   };
 
   auto buf = glz::encode(orig);
@@ -308,10 +310,14 @@ void test_devices_roundtrip() {
   assert(decoded.devices[0].name == "Pixel");
   assert(decoded.devices[0].paired);
   assert(decoded.devices[0].connected);
+  assert(decoded.devices[0].uuids.size() == 1u);
+  assert(decoded.devices[0].uuids[0] ==
+         "0000112f-0000-1000-8000-00805f9b34fb");
   assert(decoded.devices[1].address == "11:22:33:44:55:66");
   assert(decoded.devices[1].name == "Headset");
   assert(!decoded.devices[1].paired);
   assert(!decoded.devices[1].connected);
+  assert(decoded.devices[1].uuids.empty());
 }
 
 void test_error_roundtrip() {

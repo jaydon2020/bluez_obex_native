@@ -403,7 +403,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     final destinationPtr = NativeString(destination);
     final targetPtr = NativeString(target);
     try {
-      return _bridge.readGlaze<BlueZObexSessionProps>(
+      return _bridge.readGlazeOnce<BlueZObexSessionProps>(
         'bluez_obex_client_create_session',
         (out, capacity) => nativeBindings.bluez_obex_client_create_session(
           _bridge.handle,
@@ -527,7 +527,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     final target = NativeString(targetFile);
     final nativeFilters = NativeStringMap(filters);
     try {
-      return _bridge.readGlaze<BlueZObexTransferResult>(
+      return _bridge.readGlazeOnce<BlueZObexTransferResult>(
         'bluez_obex_phonebook_pull_all',
         (out, capacity) => nativeBindings.bluez_obex_phonebook_pull_all(
           _bridge.handle,
@@ -792,7 +792,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     final folderPtr = NativeString(folder);
     final nativeArgs = NativeStringMap(args);
     try {
-      return _bridge.readGlaze<BlueZObexTransferResult>(
+      return _bridge.readGlazeOnce<BlueZObexTransferResult>(
         'bluez_obex_message_access_push_message',
         (out, capacity) =>
             nativeBindings.bluez_obex_message_access_push_message(
@@ -842,7 +842,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     final path = NativeString(messagePath);
     final target = NativeString(targetFile);
     try {
-      return _bridge.readGlaze<BlueZObexTransferResult>(
+      return _bridge.readGlazeOnce<BlueZObexTransferResult>(
         'bluez_obex_message_get',
         (out, capacity) => nativeBindings.bluez_obex_message_get(
           _bridge.handle,
@@ -913,6 +913,10 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
       name: 'Simulated phone',
       paired: true,
       connected: true,
+      uuids: [
+        '0000112f-0000-1000-8000-00805f9b34fb',
+        '00001132-0000-1000-8000-00805f9b34fb',
+      ],
     ),
   ];
 
