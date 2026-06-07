@@ -89,7 +89,9 @@ Future<void> main(List<String> args) async {
       await message.setRead(true);
 
       if (File(targetFile).existsSync()) {
-        print('Message downloaded to $targetFile');
+        print('Message downloaded to ${File(targetFile).absolute.path}');
+      } else {
+        print('Transfer complete. Note: The BlueZ OBEX daemon typically saves files to: ~/.cache/obexd/$targetFile');
       }
     } else {
       print('Unknown action: $action');
