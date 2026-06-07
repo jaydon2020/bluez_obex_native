@@ -59,7 +59,27 @@ Future<void> main(List<String> args) async {
         print('Error: Missing message path to download.');
         return;
       }
-      final message = client.message(messagePath);
+      // Message paths are session-scoped: /org/bluez/obex/client/sessionN/messageHANDLE
+      // The session number changes each run, so we resolve the handle against the
+      // current session by listing messages and matching by the final path segment
+      // (the MAP message handle, which is stable across sessions for the same device).
+      final requestedHandle = messagePath.split('/').last;
+      print('Resolving message handle "$requestedHandle" in current session...');
+      final allMessages = await session.messageAccess.listMessages(
+        'telecom/msg/inbox',
+        filters: {},
+      );
+      final matched = allMessages.where(
+        (m) => m.objectPath.split('/').last == requestedHandle ||
+               m.objectPath == messagePath,
+      );
+      if (matched.isEmpty) {
+        print('Error: Message "$requestedHandle" not found in inbox.');
+        print('Tip: Run with action "list" to see available message paths.');
+        return;
+      }
+      final message = matched.first;
+      print('Found message at: ${message.objectPath}');
       final targetFile = 'message.bmsg';
       print('Downloading message to $targetFile...');
       final transfer = await message.get(targetFile, attachment: false);
