@@ -742,7 +742,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     final folderPtr = NativeString(folder);
     final nativeFilters = NativeStringMap(filters);
     try {
-      final result = _bridge.readGlaze<BlueZObexMessages>(
+      final result = _bridge.readGlazeOnce<BlueZObexMessages>(
         'bluez_obex_message_access_list_messages',
         (out, capacity) =>
             nativeBindings.bluez_obex_message_access_list_messages(
@@ -755,6 +755,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
               out,
               capacity,
             ),
+        capacity: 1024 * 1024,
       );
       return result.messages;
     } finally {

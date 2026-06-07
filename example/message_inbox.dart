@@ -23,7 +23,9 @@ Future<void> main(List<String> args) async {
   }
 
   final positionalArgs = args.where((arg) => !arg.startsWith('-')).toList();
-  final address = positionalArgs.isNotEmpty ? positionalArgs[0] : kDefaultAddress;
+  final address = positionalArgs.isNotEmpty
+      ? positionalArgs[0]
+      : kDefaultAddress;
   final action = positionalArgs.length > 1 ? positionalArgs[1] : 'list';
   final messagePath = positionalArgs.length > 2 ? positionalArgs[2] : null;
   final simulated = hasFlag(args, '--simulated');
@@ -37,18 +39,20 @@ Future<void> main(List<String> args) async {
     final session = await client.createSession(address, target: 'map');
     print('Session created: ${session.objectPath}');
 
-    print('Setting folder to "inbox"...');
-    await session.messageAccess.setFolder('inbox');
-
     if (action == 'list') {
       print('Listing messages...');
-      final messages = await session.messageAccess.listMessages('inbox');
+      final messages = await session.messageAccess.listMessages(
+        'telecom/msg/inbox',
+        filters: {'MaxCount': 50, 'SubjectLength': 120},
+      );
       if (messages.isEmpty) {
         print('  (No messages)');
       }
       for (final message in messages) {
         final props = message.lastProperties;
-        print('  ${message.objectPath}: ${props?.subject ?? "(No Subject)"} from ${props?.sender ?? "(Unknown)"}');
+        print(
+          '  ${message.objectPath}: ${props?.subject ?? "(No Subject)"} from ${props?.sender ?? "(Unknown)"}',
+        );
       }
     } else if (action == 'download') {
       if (messagePath == null) {

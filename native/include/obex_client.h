@@ -20,7 +20,12 @@ public:
   std::vector<uint8_t> get_managed_objects() const;
 
   static constexpr auto kObexService = "org.bluez.obex";
-  static constexpr auto kObexRootPath = "/org/bluez/obex";
+  // Path for the org.bluez.obex.Client1 interface
+  // (CreateSession/RemoveSession).
+  static constexpr auto kObexClientPath = "/org/bluez/obex";
+  // Path for the org.freedesktop.DBus.ObjectManager interface
+  // (GetManagedObjects).
+  static constexpr auto kObexRootPath = "/";
   static constexpr auto kObjectManagerIface =
       "org.freedesktop.DBus.ObjectManager";
 

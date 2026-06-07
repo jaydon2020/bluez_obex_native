@@ -75,6 +75,15 @@ bool parse_uint16(const std::string &value, uint16_t &out) {
   return true;
 }
 
+bool parse_uint8(const std::string &value, uint8_t &out) {
+  uint16_t parsed{};
+  if (!parse_uint16(value, parsed) || parsed > UINT8_MAX) {
+    return false;
+  }
+  out = static_cast<uint8_t>(parsed);
+  return true;
+}
+
 std::vector<std::string> split_csv(const std::string &value) {
   std::vector<std::string> result;
   size_t start = 0;
@@ -95,6 +104,10 @@ std::vector<std::string> split_csv(const std::string &value) {
 bool is_uint16_filter_key(const std::string &key) {
   return key == "MaxCount" || key == "Offset" || key == "ListStartOffset" ||
          key == "StartOffset";
+}
+
+bool is_uint8_filter_key(const std::string &key) {
+  return key == "SubjectLength";
 }
 
 bool is_fields_filter_key(const std::string &key) {
@@ -118,9 +131,12 @@ make_variant_map(const char **keys, const char **values, int32_t count) {
       continue;
     }
 
-    uint16_t parsed{};
-    if (is_uint16_filter_key(key) && parse_uint16(value, parsed)) {
-      result[key] = sdbus::Variant{parsed};
+    uint16_t parsed_uint16{};
+    uint8_t parsed_uint8{};
+    if (is_uint16_filter_key(key) && parse_uint16(value, parsed_uint16)) {
+      result[key] = sdbus::Variant{parsed_uint16};
+    } else if (is_uint8_filter_key(key) && parse_uint8(value, parsed_uint8)) {
+      result[key] = sdbus::Variant{parsed_uint8};
     } else if (is_fields_filter_key(key)) {
       result[key] = sdbus::Variant{split_csv(value)};
     } else if (value == "true" || value == "false") {

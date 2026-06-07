@@ -6,7 +6,7 @@
 #include "../generated/message1_proxy.h"
 #include "../generated/message_access1_proxy.h"
 
-#include <tuple>
+#include <string_view>
 
 namespace {
 
@@ -39,14 +39,12 @@ to_folders(const std::vector<std::map<std::string, sdbus::Variant>> &items) {
 }
 
 BlueZObexMessages to_messages(
-    const std::vector<
-        sdbus::Struct<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>>
+    const std::map<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>
         &items) {
   BlueZObexMessages result;
   result.messages.reserve(items.size());
-  for (const auto &item : items) {
-    result.messages.push_back(
-        obex::message_props_from_map(std::get<0>(item), std::get<1>(item)));
+  for (const auto &[path, props] : items) {
+    result.messages.push_back(obex::message_props_from_map(path, props));
   }
   return result;
 }
@@ -92,7 +90,31 @@ BlueZObexMessages ObexMessageAccessProxy::list_messages(
     const std::string &folder,
     const std::map<std::string, sdbus::Variant> &filter) const {
   GeneratedMessageAccess1Proxy message_access{*proxy_};
-  return to_messages(message_access.ListMessages(folder, filter));
+  auto normalized = std::string_view{folder};
+  while (!normalized.empty() && normalized.front() == '/') {
+    normalized.remove_prefix(1);
+  }
+  while (!normalized.empty() && normalized.back() == '/') {
+    normalized.remove_suffix(1);
+  }
+
+  const auto separator = normalized.rfind('/');
+  if (separator == std::string_view::npos) {
+    return to_messages(
+        message_access.ListMessages(std::string{normalized}, filter));
+  }
+
+  const auto parent = normalized.substr(0, separator);
+  const auto child = normalized.substr(separator + 1);
+  if (!parent.empty()) {
+    try {
+      message_access.SetFolder(std::string{parent});
+    } catch (const sdbus::Error &) {
+      return to_messages(
+          message_access.ListMessages(std::string{child}, filter));
+    }
+  }
+  return to_messages(message_access.ListMessages(std::string{child}, filter));
 }
 
 std::vector<uint8_t> ObexMessageAccessProxy::encoded_list_messages(

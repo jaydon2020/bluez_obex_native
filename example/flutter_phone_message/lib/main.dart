@@ -130,7 +130,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
         ? await BlueZObexClient.simulated(outputDirectory: _workspace)
         : await BlueZObexClient.connect();
     _eventSubscription = client.events.listen((event) {
-      if (mounted) {
+      if (mounted && _shouldLogEvent(event)) {
         setState(() => _prependLog('event ${event.type.name}'));
       }
     });
@@ -167,6 +167,12 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       }
     }
     final client = await _ensureClient();
+    final existing = _session;
+    if (existing?.lastProperties?.target == target ||
+        existing?.lastProperties?.target == requiredUuid) {
+      return existing!;
+    }
+
     final BlueZObexSession session;
     try {
       session = await client.createSession(address, target: target);
@@ -239,7 +245,10 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   Future<void> _loadInbox() async {
     final session = await _createSession('map');
     final access = session.messageAccess;
-    final messages = await access.listMessages('telecom/msg/inbox');
+    final messages = await access.listMessages(
+      'telecom/msg/inbox',
+      filters: {'MaxCount': 50, 'SubjectLength': 120},
+    );
     setState(() {
       _messages = messages;
       _prependLog('loaded ${messages.length} inbox message(s)');
@@ -545,6 +554,13 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     return client;
   }
 
+  bool _shouldLogEvent(BlueZObexEvent event) {
+    return event.type == BlueZObexEventType.session ||
+        event.type == BlueZObexEventType.transfer ||
+        event.type == BlueZObexEventType.error ||
+        event.type == BlueZObexEventType.objectRemoved;
+  }
+
   void _prependLog(String message) {
     _log.insert(0, message);
     if (_log.length > 8) {
@@ -587,14 +603,14 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
                 onPressed: _busy || !_canUsePbap
                     ? null
                     : () => _run('sync contacts', _syncContacts),
-                icon: const Icon(Icons.contacts),
+                icon: const Icon(Icons.contacts, size: 18),
                 label: const Text('Sync contacts'),
               ),
               FilledButton.tonalIcon(
                 onPressed: _busy || !_canUseMap
                     ? null
                     : () => _run('list inbox', _loadInbox),
-                icon: const Icon(Icons.inbox),
+                icon: const Icon(Icons.inbox, size: 18),
                 label: const Text('List inbox'),
               ),
             ],
@@ -614,10 +630,11 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
             for (final contact in _contacts)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.person),
+                minLeadingWidth: 28,
+                leading: const Icon(Icons.person, size: 18),
                 title: Text(contact.name),
                 subtitle: Text(contact.vcard),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => _showContactDetails(contact),
               ),
           ],
@@ -628,14 +645,15 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
             for (final message in _messages)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.message),
+                minLeadingWidth: 28,
+                leading: const Icon(Icons.message, size: 18),
                 title: Text(
                   message.lastProperties?.subject ?? message.objectPath,
                 ),
                 subtitle: Text(message.lastProperties?.sender ?? ''),
                 trailing: IconButton(
                   tooltip: 'Download message',
-                  icon: const Icon(Icons.download),
+                  icon: const Icon(Icons.download, size: 18),
                   onPressed: _busy
                       ? null
                       : () => _run(
@@ -842,8 +860,11 @@ class _ContactDetailSheet extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                               child: Image.memory(
                                 imageBytes,
-                                width: 160,
+                                width: 88,
+                                height: 88,
                                 fit: BoxFit.contain,
+                                filterQuality: FilterQuality.none,
+                                isAntiAlias: false,
                                 errorBuilder: (context, error, stackTrace) =>
                                     const Text('Could not decode image'),
                               ),

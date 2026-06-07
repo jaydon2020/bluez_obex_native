@@ -145,7 +145,14 @@ void ObexObjectManager::post_properties(const std::string &object_path,
       post_glaze(0x02, extract_transfer_props(object_path, *props));
     }
   } catch (const sdbus::Error &e) {
-    post_error(object_path, e.getName(), e.getMessage());
+    // Silently ignore errors on objects that were removed before we could
+    // fetch their properties (e.g. a Transfer1 that completed and was
+    // removed between the PropertiesChanged signal and the GetAll call).
+    const std::string name = e.getName();
+    if (name != "org.freedesktop.DBus.Error.UnknownObject" &&
+        name != "org.freedesktop.DBus.Error.UnknownInterface") {
+      post_error(object_path, name, e.getMessage());
+    }
   }
 }
 
