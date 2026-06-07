@@ -39,6 +39,7 @@ class PhoneMessageHome extends StatefulWidget {
 
 class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   final _addressController = TextEditingController(text: 'AA:BB:CC:DD:EE:FF');
+  final _limitController = TextEditingController(text: '10');
   final _log = <String>[];
   Directory? _workspace;
   BlueZObexClient? _client;
@@ -48,7 +49,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   String? _selectedAddress;
   List<BlueZObexPhonebookEntry> _contacts = const [];
   List<BlueZObexMessage> _messages = const [];
-  bool _simulated = true;
+  static const bool _simulated = false;
   bool _busy = false;
   String? _contactsFile;
   String? _messageFile;
@@ -89,6 +90,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   @override
   void dispose() {
     _addressController.dispose();
+    _limitController.dispose();
     _eventSubscription?.cancel();
     _client?.dispose();
     _workspace?.delete(recursive: true).ignore();
@@ -212,29 +214,16 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     });
   }
 
-  void _setSimulated(bool value) {
-    _eventSubscription?.cancel().ignore();
-    _client?.dispose().ignore();
-    setState(() {
-      _simulated = value;
-      _client = null;
-      _session = null;
-      _devices = const [];
-      _selectedAddress = null;
-      _contacts = const [];
-      _messages = const [];
-      _contactsFile = null;
-      _messageFile = null;
-    });
-  }
-
   Future<void> _syncContacts() async {
     final session = await _createSession('pbap');
     final phonebook = session.phonebook;
     await phonebook.select('int', 'pb');
-    final contacts = await phonebook.list();
+    final limit = int.tryParse(_limitController.text) ?? 10;
+    final contacts = await phonebook.list(filters: {'MaxCount': limit});
     final targetFile = '${_workspace!.path}/contacts.vcf';
-    await _waitForTransferComplete(() => phonebook.pullAll(targetFile));
+    await _waitForTransferComplete(
+      () => phonebook.pullAll(targetFile, filters: {'MaxCount': limit}),
+    );
     setState(() {
       _contacts = contacts;
       _contactsFile = targetFile;
@@ -245,9 +234,10 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   Future<void> _loadInbox() async {
     final session = await _createSession('map');
     final access = session.messageAccess;
+    final limit = int.tryParse(_limitController.text) ?? 10;
     final messages = await access.listMessages(
       'telecom/msg/inbox',
-      filters: {'MaxCount': 50, 'SubjectLength': 120},
+      filters: {'MaxCount': limit, 'SubjectLength': 120},
     );
     setState(() {
       _messages = messages;
@@ -577,12 +567,10 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
         children: [
           _ConnectionPanel(
             addressController: _addressController,
-            simulated: _simulated,
             busy: _busy,
             devices: _devices,
             selectedAddress: _selectedAddress,
             selectedDevice: _selectedDevice,
-            onSimulatedChanged: _setSimulated,
             onRefreshDevices: () => _run('refresh devices', _refreshDevices),
             onDeviceSelected: (value) {
               if (value == null) {
@@ -593,6 +581,17 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
                 _addressController.text = value;
               });
             },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _limitController,
+            enabled: !_busy,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Limit (max messages / contacts)',
+              helperText: 'Limits the number of contacts and messages to retrieve.',
+              border: OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -679,23 +678,19 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
 
 class _ConnectionPanel extends StatelessWidget {
   final TextEditingController addressController;
-  final bool simulated;
   final bool busy;
   final List<BlueZDevice> devices;
   final String? selectedAddress;
   final BlueZDevice? selectedDevice;
-  final ValueChanged<bool> onSimulatedChanged;
   final VoidCallback onRefreshDevices;
   final ValueChanged<String?> onDeviceSelected;
 
   const _ConnectionPanel({
     required this.addressController,
-    required this.simulated,
     required this.busy,
     required this.devices,
     required this.selectedAddress,
     required this.selectedDevice,
-    required this.onSimulatedChanged,
     required this.onRefreshDevices,
     required this.onDeviceSelected,
   });
@@ -705,13 +700,6 @@ class _ConnectionPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Simulated endpoint'),
-          subtitle: const Text('Disable to use a physical BlueZ OBEX phone'),
-          value: simulated,
-          onChanged: busy ? null : onSimulatedChanged,
-        ),
         Row(
           children: [
             Expanded(
@@ -745,16 +733,14 @@ class _ConnectionPanel extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: addressController,
-          enabled: simulated && !busy,
+          enabled: !busy,
           decoration: const InputDecoration(
             labelText: 'Bluetooth address',
             border: OutlineInputBorder(),
           ),
         ),
-        if (!simulated) ...[
-          const SizedBox(height: 8),
-          Text(_deviceStatusText(selectedDevice)),
-        ],
+        const SizedBox(height: 8),
+        Text(_deviceStatusText(selectedDevice)),
       ],
     );
   }

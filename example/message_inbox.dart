@@ -16,22 +16,35 @@ Future<void> main(List<String> args) async {
         '  download <message_path>  Download a specific message to message.bmsg',
         '',
         '  address    The Bluetooth address (e.g. AA:BB:CC:DD:EE:FF)',
-        '  --simulated  Use the simulated OBEX endpoint',
+        '  --limit <number>  Max number of messages to fetch (default: 10)',
       ],
     );
     return;
   }
 
-  final positionalArgs = args.where((arg) => !arg.startsWith('-')).toList();
+  final limitStr = hasFlag(args, '--limit') ? optionValue(args, '--limit') : '10';
+  final limit = int.tryParse(limitStr) ?? 10;
+
+  final positionalArgs = <String>[];
+  for (var i = 0; i < args.length; i++) {
+    final arg = args[i];
+    if (arg.startsWith('-')) {
+      if (arg == '--limit' && i + 1 < args.length) {
+        i++;
+      }
+      continue;
+    }
+    positionalArgs.add(arg);
+  }
+
   final address = positionalArgs.isNotEmpty
       ? positionalArgs[0]
       : kDefaultAddress;
   final action = positionalArgs.length > 1 ? positionalArgs[1] : 'list';
   final messagePath = positionalArgs.length > 2 ? positionalArgs[2] : null;
-  final simulated = hasFlag(args, '--simulated');
 
-  print('Connecting to $address (simulated: $simulated)...');
-  final client = await createClient(simulated: simulated);
+  print('Connecting to $address...');
+  final client = await createClient();
 
   try {
     print('Creating session for target "map"...');
@@ -43,7 +56,7 @@ Future<void> main(List<String> args) async {
       print('Listing messages...');
       final messages = await session.messageAccess.listMessages(
         'telecom/msg/inbox',
-        filters: {'MaxCount': 50, 'SubjectLength': 120},
+        filters: {'MaxCount': limit, 'SubjectLength': 120},
       );
       if (messages.isEmpty) {
         print('  (No messages)');

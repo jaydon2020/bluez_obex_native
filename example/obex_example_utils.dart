@@ -28,11 +28,9 @@ void printUsage(String usage, List<String> details) {
   }
 }
 
-Future<BlueZObexClient> createClient({bool simulated = false}) async {
+Future<BlueZObexClient> createClient() async {
   try {
-    return simulated
-        ? await BlueZObexClient.simulated()
-        : await BlueZObexClient.connect();
+    return await BlueZObexClient.connect();
   } catch (error) {
     throw StateError(
       '$error\n'

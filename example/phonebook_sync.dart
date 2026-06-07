@@ -12,17 +12,31 @@ Future<void> main(List<String> args) async {
         'Connects to a Bluetooth device, creates a PBAP session, and downloads contacts to contacts.vcf.',
         '',
         '  address    The Bluetooth address (e.g. AA:BB:CC:DD:EE:FF)',
-        '  --simulated  Use the simulated OBEX endpoint instead of a physical device',
+        '  --limit <number>  Max number of contacts to fetch (default: 10)',
       ],
     );
     return;
   }
 
-  final address = args.where((arg) => !arg.startsWith('-')).firstOrNull ?? kDefaultAddress;
-  final simulated = hasFlag(args, '--simulated');
+  final limitStr = hasFlag(args, '--limit') ? optionValue(args, '--limit') : '10';
+  final limit = int.tryParse(limitStr) ?? 10;
 
-  print('Connecting to $address (simulated: $simulated)...');
-  final client = await createClient(simulated: simulated);
+  final positionalArgs = <String>[];
+  for (var i = 0; i < args.length; i++) {
+    final arg = args[i];
+    if (arg.startsWith('-')) {
+      if (arg == '--limit' && i + 1 < args.length) {
+        i++;
+      }
+      continue;
+    }
+    positionalArgs.add(arg);
+  }
+
+  final address = positionalArgs.firstOrNull ?? kDefaultAddress;
+
+  print('Connecting to $address...');
+  final client = await createClient();
 
   try {
     print('Creating session for target "pbap"...');
@@ -35,8 +49,8 @@ Future<void> main(List<String> args) async {
     final size = await session.phonebook.getSize();
     print('Phonebook size: $size');
 
-    print('Listing entries (max 50)...');
-    final entries = await session.phonebook.list(filters: {'MaxCount': 50});
+    print('Listing entries (max $limit)...');
+    final entries = await session.phonebook.list(filters: {'MaxCount': limit});
     for (final entry in entries) {
       print('  ${entry.name}');
     }
