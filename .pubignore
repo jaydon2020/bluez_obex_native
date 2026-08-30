@@ -1,0 +1,18 @@
+# Native sources must ship because hook/build.dart compiles them on the
+# consumer's machine. Only generated build outputs and development files are
+# excluded.
+
+build/
+native/build/
+native/build-*/
+native/test/
+native/third_party/sdbus-cpp/build/
+native/third_party/sdbus-cpp/.git/
+
+interfaces/
+scripts/
+.github/
+.clang-format
+.clang-tidy
+.gitmodules
+codecov.yaml
