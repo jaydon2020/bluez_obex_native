@@ -1,24 +1,34 @@
-# flutter_phone_message
+# OBEX Phone Studio
 
-Flutter Linux app demonstrating phone contacts and messages over
-`bluez_obex_native`.
+Flutter Linux control surface for the complete PBAP, MAP, and Transfer1 API
+exposed by `bluez_obex_native`.
 
-The app mirrors the sibling example apps in this workspace:
+The app starts with a deterministic simulated phone. Select **System BlueZ**
+to use a connected physical phone. The phone must advertise the PBAP or MAP
+UUID before the matching workspace is enabled.
 
-* `bluez_native/example/flutter_ble_scanner`
-* `bluez_media_native/example/flutter_ble_audio`
+## Workspaces
 
-It supports two modes:
+- **Overview** — endpoint selection, BlueZ devices, managed objects, Session1
+  properties, and capabilities.
+- **Contacts** — Select, List, Search, PullAll, Pull, GetSize, UpdateVersion,
+  ListFilterFields, all PhonebookAccess1 properties, and parsed vCard fields.
+- **Messages** — SetFolder, ListFolders, ListMessages, UpdateInbox,
+  PushMessage, ListFilterFields, SupportedTypes, every Message1 property,
+  download attachment selection, and read/deleted writes.
+- **Transfers** — every Transfer1 property plus Cancel, Suspend, and Resume.
+- **Activity** — live typed ObjectManager property, addition, removal, transfer,
+  and error events.
 
-* **Simulated endpoint**: default, no Bluetooth hardware required.
-* **Physical BlueZ OBEX**: connect the phone in system Bluetooth settings,
-  disable the toggle, refresh BlueZ devices, choose a phone, then sync contacts
-  or list the inbox. The app creates the needed OBEX session for each action.
+Event ownership is scoped to the endpoint. Switching endpoints or closing the
+widget aborts transfer waiters, cancels the event subscription, removes both
+OBEX sessions, disposes the client, and finally deletes temporary files.
 
-Run:
+Run and test:
 
 ```sh
 flutter run -d linux
+flutter test
 ```
 
 Build:
