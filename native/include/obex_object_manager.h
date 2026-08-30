@@ -33,6 +33,18 @@ public:
   extract_transfer_props(const std::string &object_path,
                          const PropertiesMap &props);
 
+  static BlueZObexPhonebookProps
+  extract_phonebook_props(const std::string &object_path,
+                          const PropertiesMap &props);
+
+  static BlueZObexMessageProps
+  extract_message_props(const std::string &object_path,
+                        const PropertiesMap &props);
+
+  static BlueZObexMessageAccessProps
+  extract_message_access_props(const std::string &object_path,
+                               const PropertiesMap &props);
+
 private:
   static constexpr auto kObexService = "org.bluez.obex";
   static constexpr auto kObexRootPath = "/";
@@ -41,6 +53,9 @@ private:
   static constexpr auto kPropertiesIface = "org.freedesktop.DBus.Properties";
   static constexpr auto kSessionIface = "org.bluez.obex.Session1";
   static constexpr auto kTransferIface = "org.bluez.obex.Transfer1";
+  static constexpr auto kPhonebookIface = "org.bluez.obex.PhonebookAccess1";
+  static constexpr auto kMessageAccessIface = "org.bluez.obex.MessageAccess1";
+  static constexpr auto kMessageIface = "org.bluez.obex.Message1";
 
   void on_interfaces_added(const sdbus::ObjectPath &object_path,
                            const InterfacesMap &interfaces);
@@ -52,6 +67,8 @@ private:
                        const PropertiesMap *properties = nullptr);
   void post_removed(const std::string &object_path,
                     const std::string &interface_name);
+  void post_added(const std::string &object_path,
+                  const std::string &interface_name);
   void post_error(const std::string &object_path, const std::string &name,
                   const std::string &message);
 

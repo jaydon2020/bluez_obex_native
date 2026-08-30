@@ -7,8 +7,10 @@
 //   0x04 = BlueZObexPhonebookEntry    (PBAP listing entry/list payload)
 //   0x05 = BlueZObexMessageFolder     (MAP folder listing entry/list payload)
 //   0x06 = BlueZObexMessageProps      (Message1 snapshot/listing entry)
+//   0x07 = BlueZObexMessageAccessProps (MessageAccess1 snapshot/change)
 //   0x10 = BlueZObexTransferResult    (methods returning object, dict)
 //   0x20 = BlueZObexError             (D-Bus/native error)
+//   0x7D = BlueZObexObjectAdded       (ObjectManager InterfacesAdded)
 //   0x7E = BlueZObexObjectRemoved     (ObjectManager InterfacesRemoved)
 //   0xFF = sentinel (stream done)
 
@@ -38,6 +40,7 @@ struct BlueZObexSessionProps {
   std::string source;
   std::string destination;
   uint8_t channel{};
+  uint16_t psm{};
   std::string target;
   std::string root;
 };
@@ -47,6 +50,7 @@ template <> struct glz::meta<BlueZObexSessionProps> {
       glz::field("source", &BlueZObexSessionProps::source),
       glz::field("destination", &BlueZObexSessionProps::destination),
       glz::field("channel", &BlueZObexSessionProps::channel),
+      glz::field("psm", &BlueZObexSessionProps::psm),
       glz::field("target", &BlueZObexSessionProps::target),
       glz::field("root", &BlueZObexSessionProps::root));
 };
@@ -156,6 +160,11 @@ struct BlueZObexMessageProps {
   bool deleted{};
   bool sent{};
   bool protected_{};
+  std::string deliveryStatus;
+  uint64_t conversationId{};
+  std::string conversationName;
+  std::string direction;
+  std::string attachmentMimeTypes;
 };
 template <> struct glz::meta<BlueZObexMessageProps> {
   static constexpr auto fields = std::make_tuple(
@@ -177,7 +186,24 @@ template <> struct glz::meta<BlueZObexMessageProps> {
       glz::field("read", &BlueZObexMessageProps::read),
       glz::field("deleted", &BlueZObexMessageProps::deleted),
       glz::field("sent", &BlueZObexMessageProps::sent),
-      glz::field("protected", &BlueZObexMessageProps::protected_));
+      glz::field("protected", &BlueZObexMessageProps::protected_),
+      glz::field("deliveryStatus", &BlueZObexMessageProps::deliveryStatus),
+      glz::field("conversationId", &BlueZObexMessageProps::conversationId),
+      glz::field("conversationName", &BlueZObexMessageProps::conversationName),
+      glz::field("direction", &BlueZObexMessageProps::direction),
+      glz::field("attachmentMimeTypes",
+                 &BlueZObexMessageProps::attachmentMimeTypes));
+};
+
+struct BlueZObexMessageAccessProps {
+  std::string objectPath;
+  std::vector<std::string> supportedTypes;
+};
+template <> struct glz::meta<BlueZObexMessageAccessProps> {
+  static constexpr auto fields = std::make_tuple(
+      glz::field("objectPath", &BlueZObexMessageAccessProps::objectPath),
+      glz::field("supportedTypes",
+                 &BlueZObexMessageAccessProps::supportedTypes));
 };
 
 // MessageAccess1 ListMessages result.
@@ -229,6 +255,16 @@ template <> struct glz::meta<BlueZObexManagedObjects> {
 struct BlueZObexObjectRemoved {
   std::string objectPath;
   std::string interfaceName;
+};
+
+struct BlueZObexObjectAdded {
+  std::string objectPath;
+  std::string interfaceName;
+};
+template <> struct glz::meta<BlueZObexObjectAdded> {
+  static constexpr auto fields = std::make_tuple(
+      glz::field("objectPath", &BlueZObexObjectAdded::objectPath),
+      glz::field("interfaceName", &BlueZObexObjectAdded::interfaceName));
 };
 template <> struct glz::meta<BlueZObexObjectRemoved> {
   static constexpr auto fields = std::make_tuple(

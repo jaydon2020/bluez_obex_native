@@ -24,5 +24,6 @@
       <arg name="transfer" type="o" direction="out"/>
       <arg name="properties" type="a{sv}" direction="out"/>
     </method>
+    <property name="SupportedTypes" type="as" access="read"/>
   </interface>
 </node>

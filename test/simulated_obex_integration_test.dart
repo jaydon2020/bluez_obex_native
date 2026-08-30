@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:bluez_obex_native/bluez_obex_native.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('simulated OBEX integration', () {
@@ -42,6 +42,19 @@ void main() {
       expect(transfer.transferPath, contains('/transfer'));
       expect(await File(target).readAsString(), contains('BEGIN:VCARD'));
       expect(await File(target).readAsString(), contains('Ada Lovelace'));
+
+      final singleTarget = '${tempDir.path}/ada.vcf';
+      final single = await phonebook.pull('1.vcf', singleTarget);
+      expect(await File(singleTarget).readAsString(), contains('Ada Lovelace'));
+
+      final controlled = client.transfer(single.transferPath);
+      expect((await controlled.properties()).status, 'complete');
+      await controlled.suspend();
+      expect((await controlled.properties()).status, 'suspended');
+      await controlled.resume();
+      expect((await controlled.properties()).status, 'active');
+      await controlled.cancel();
+      expect((await controlled.properties()).status, 'cancelled');
     });
 
     test('lists inbox messages, downloads one, and toggles status', () async {
@@ -88,10 +101,83 @@ void main() {
 
       expect(
         received.map((event) => event.type),
-        containsAll([BlueZObexEventType.session, BlueZObexEventType.transfer]),
+        containsAll([
+          BlueZObexEventType.session,
+          BlueZObexEventType.phonebook,
+          BlueZObexEventType.objectAdded,
+          BlueZObexEventType.message,
+          BlueZObexEventType.transfer,
+        ]),
+      );
+      expect(
+        received
+            .where((event) => event.type == BlueZObexEventType.messageAccess)
+            .single
+            .payload,
+        isA<BlueZObexMessageAccessProps>(),
+      );
+      expect(
+        received
+            .where((event) => event.type == BlueZObexEventType.objectAdded)
+            .map((event) => event.payload),
+        everyElement(isA<BlueZObexObjectAdded>()),
       );
 
       await sub.cancel();
+    });
+
+    test('covers session, phonebook, and message access operations', () async {
+      expect(await client.getDevices(), isNotEmpty);
+      final session = await client.createSession(
+        'AA:BB:CC:DD:EE:FF',
+        target: 'map',
+      );
+
+      expect((await session.properties()).destination, 'AA:BB:CC:DD:EE:FF');
+      expect(await session.capabilities(), contains('MAP'));
+      expect(await session.phonebook.properties(), isNotNull);
+      expect(await session.phonebook.getSize(), 2);
+      expect(await session.phonebook.listFilterFields(), contains('Fields'));
+      await session.phonebook.updateVersion();
+
+      final access = session.messageAccess;
+      expect((await access.properties()).supportedTypes, contains('SMS_GSM'));
+      await access.setFolder('telecom/msg/inbox');
+      expect(await access.listFilterFields(), contains('SubjectLength'));
+      await access.updateInbox();
+
+      final source = File('${tempDir.path}/outgoing.bmsg');
+      await source.writeAsString('BEGIN:BMSG\nEND:BMSG\n');
+      final pushed = await access.pushMessage(
+        source.path,
+        'telecom/msg/outbox',
+        args: {'Recipient': '+10000000000'},
+      );
+      expect(pushed.transferPath, contains('/transfer'));
+
+      await session.remove();
+      expect((await client.getManagedObjects()).sessions, isEmpty);
+    });
+
+    test('rejects missing objects and permits repeated disposal', () async {
+      final missing = client.session('/org/bluez/obex/client/missing');
+      await expectLater(
+        missing.properties(),
+        throwsA(isA<BlueZObexNativeException>()),
+      );
+      await expectLater(
+        client.transfer('/org/bluez/obex/client/missing-transfer').properties(),
+        throwsA(isA<BlueZObexNativeException>()),
+      );
+
+      final session = await client.createSession('AA:BB:CC:DD:EE:FF');
+      await expectLater(
+        session.phonebook.pull('missing.vcf', '${tempDir.path}/missing.vcf'),
+        throwsA(isA<BlueZObexNativeException>()),
+      );
+
+      await client.dispose();
+      await client.dispose();
     });
   });
 }

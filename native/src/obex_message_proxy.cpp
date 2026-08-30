@@ -39,12 +39,14 @@ to_folders(const std::vector<std::map<std::string, sdbus::Variant>> &items) {
 }
 
 BlueZObexMessages to_messages(
-    const std::map<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>
+    const std::vector<
+        sdbus::Struct<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>>
         &items) {
   BlueZObexMessages result;
   result.messages.reserve(items.size());
-  for (const auto &[path, props] : items) {
-    result.messages.push_back(obex::message_props_from_map(path, props));
+  for (const auto &item : items) {
+    result.messages.push_back(
+        obex::message_props_from_map(std::get<0>(item), std::get<1>(item)));
   }
   return result;
 }
@@ -135,6 +137,17 @@ BlueZObexTransferResult ObexMessageAccessProxy::push_message(
   const auto [path, props] =
       message_access.PushMessage(source_file, folder, args);
   return obex::transfer_result_from_dbus(path, props);
+}
+
+BlueZObexMessageAccessProps ObexMessageAccessProxy::properties() const {
+  return obex::message_access_props_from_map(
+      object_path_,
+      obex::get_all_properties(conn_, ObexClient::kObexService, object_path_,
+                               "org.bluez.obex.MessageAccess1"));
+}
+
+std::vector<uint8_t> ObexMessageAccessProxy::encoded_properties() const {
+  return glz::encode(properties());
 }
 
 ObexMessageProxy::ObexMessageProxy(sdbus::IConnection &conn,

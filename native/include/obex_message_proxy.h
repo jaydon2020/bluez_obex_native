@@ -34,6 +34,8 @@ public:
   BlueZObexTransferResult
   push_message(const std::string &source_file, const std::string &folder,
                const std::map<std::string, sdbus::Variant> &args = {}) const;
+  BlueZObexMessageAccessProps properties() const;
+  std::vector<uint8_t> encoded_properties() const;
 
 private:
   sdbus::IConnection &conn_;

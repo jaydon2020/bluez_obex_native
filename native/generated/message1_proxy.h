@@ -130,6 +130,31 @@ public:
         return m_proxy.getProperty("Protected").onInterface(INTERFACE_NAME).get<bool>();
     }
 
+    std::string DeliveryStatus()
+    {
+        return m_proxy.getProperty("DeliveryStatus").onInterface(INTERFACE_NAME).get<std::string>();
+    }
+
+    uint64_t ConversationId()
+    {
+        return m_proxy.getProperty("ConversationId").onInterface(INTERFACE_NAME).get<uint64_t>();
+    }
+
+    std::string ConversationName()
+    {
+        return m_proxy.getProperty("ConversationName").onInterface(INTERFACE_NAME).get<std::string>();
+    }
+
+    std::string Direction()
+    {
+        return m_proxy.getProperty("Direction").onInterface(INTERFACE_NAME).get<std::string>();
+    }
+
+    std::string AttachmentMimeTypes()
+    {
+        return m_proxy.getProperty("AttachmentMimeTypes").onInterface(INTERFACE_NAME).get<std::string>();
+    }
+
 private:
     sdbus::IProxy& m_proxy;
 };

@@ -28,6 +28,9 @@ public:
   BlueZObexTransferResult
   pull(const std::string &vcard, const std::string &target_file,
        const std::map<std::string, sdbus::Variant> &filters = {}) const;
+  std::vector<uint8_t>
+  encoded_pull(const std::string &vcard, const std::string &target_file,
+               const std::map<std::string, sdbus::Variant> &filters = {}) const;
   BlueZObexPhonebookEntries
   list(const std::map<std::string, sdbus::Variant> &filters = {}) const;
   std::vector<uint8_t>

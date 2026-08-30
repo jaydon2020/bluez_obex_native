@@ -68,6 +68,12 @@ BlueZObexTransferResult ObexPhonebookProxy::pull(
   return obex::transfer_result_from_dbus(path, props);
 }
 
+std::vector<uint8_t> ObexPhonebookProxy::encoded_pull(
+    const std::string &vcard, const std::string &target_file,
+    const std::map<std::string, sdbus::Variant> &filters) const {
+  return glz::encode(pull(vcard, target_file, filters));
+}
+
 BlueZObexPhonebookEntries ObexPhonebookProxy::list(
     const std::map<std::string, sdbus::Variant> &filters) const {
   GeneratedPhonebookAccess1Proxy phonebook_access{*proxy_};

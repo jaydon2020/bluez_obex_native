@@ -2,3 +2,8 @@ add_executable(test_obex_types test_obex_types.cpp)
 target_link_libraries(test_obex_types PRIVATE bluez_obex_native_core)
 
 add_test(NAME test_obex_types COMMAND test_obex_types)
+
+add_executable(test_handle_lifetime test_handle_lifetime.cpp)
+target_link_libraries(test_handle_lifetime PRIVATE bluez_obex_native_core)
+
+add_test(NAME test_handle_lifetime COMMAND test_handle_lifetime)

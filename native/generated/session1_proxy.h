@@ -60,6 +60,11 @@ public:
         return m_proxy.getProperty("Channel").onInterface(INTERFACE_NAME).get<uint8_t>();
     }
 
+    uint16_t PSM()
+    {
+        return m_proxy.getProperty("PSM").onInterface(INTERFACE_NAME).get<uint16_t>();
+    }
+
     std::string Target()
     {
         return m_proxy.getProperty("Target").onInterface(INTERFACE_NAME).get<std::string>();

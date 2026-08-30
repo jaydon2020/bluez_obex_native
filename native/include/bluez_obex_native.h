@@ -36,6 +36,18 @@ FFI_PLUGIN_EXPORT int
 bluez_obex_session_get_capabilities(void *handle, const char *session_path,
                                     uint8_t *out, int32_t capacity);
 
+// ── Transfer management ──────────────────────────────────────────────────
+
+FFI_PLUGIN_EXPORT int
+bluez_obex_transfer_get_properties(void *handle, const char *transfer_path,
+                                   uint8_t *out, int32_t capacity);
+FFI_PLUGIN_EXPORT int bluez_obex_transfer_cancel(void *handle,
+                                                 const char *transfer_path);
+FFI_PLUGIN_EXPORT int bluez_obex_transfer_suspend(void *handle,
+                                                  const char *transfer_path);
+FFI_PLUGIN_EXPORT int bluez_obex_transfer_resume(void *handle,
+                                                 const char *transfer_path);
+
 // ── ObjectManager queries ──────────────────────────────────────────────────
 
 FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t *out,
@@ -56,6 +68,11 @@ bluez_obex_phonebook_pull_all(void *handle, const char *phonebook_path,
                               const char **filter_values, int32_t filter_count,
                               uint8_t *out, int32_t capacity);
 FFI_PLUGIN_EXPORT int
+bluez_obex_phonebook_pull(void *handle, const char *phonebook_path,
+                          const char *vcard, const char *target_file,
+                          const char **filter_keys, const char **filter_values,
+                          int32_t filter_count, uint8_t *out, int32_t capacity);
+FFI_PLUGIN_EXPORT int
 bluez_obex_phonebook_list(void *handle, const char *phonebook_path,
                           const char **filter_keys, const char **filter_values,
                           int32_t filter_count, uint8_t *out, int32_t capacity);
@@ -72,6 +89,10 @@ FFI_PLUGIN_EXPORT int bluez_obex_phonebook_list_filter_fields(
 
 // ── Message Access Profile ─────────────────────────────────────────────────
 
+FFI_PLUGIN_EXPORT int
+bluez_obex_message_access_get_properties(void *handle,
+                                         const char *message_access_path,
+                                         uint8_t *out, int32_t capacity);
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_set_folder(
     void *handle, const char *message_access_path, const char *folder);
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_list_folders(

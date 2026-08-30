@@ -18,8 +18,18 @@ await session.phonebook.select('int', 'pb');
 final entries = await session.phonebook.list(filters: {'MaxCount': 50});
 final transfer = await session.phonebook.pullAll('/tmp/contacts.vcf');
 
+final ada = await session.phonebook.pull('1.vcf', '/tmp/ada.vcf');
+final activeTransfer = client.transfer(ada.transferPath);
+await activeTransfer.suspend();
+await activeTransfer.resume();
+
 await client.dispose();
 ```
+
+The Dart API exposes every method and property in the bundled current BlueZ
+`Client1`, `Session1`, `Transfer1`, `PhonebookAccess1`, `MessageAccess1`, and
+`Message1` interfaces. ObjectManager additions, removals, and property changes
+are delivered through `client.events`.
 
 For CI and local development without Bluetooth hardware, use the simulated
 endpoint:
@@ -38,49 +48,15 @@ This template uses the following structure:
 * `lib`: Contains the Dart code that defines the API of the plugin, and which
   calls into the native code using `dart:ffi`.
 
-* platform folders (`linux`, etc.): Contains the build files
-  for building and bundling the native code library with the platform application.
+* `hook`: Contains the Dart native-assets build hook that compiles and bundles
+  the shared library for consumers.
 
 ## Building and bundling native code
 
-The `pubspec.yaml` specifies FFI plugins as follows:
-
-```yaml
-  plugin:
-    platforms:
-      some_platform:
-        ffiPlugin: true
-```
-
-This configuration invokes the native build for the various target platforms
-and bundles the binaries in Flutter applications using these FFI plugins.
-
-This can be combined with dartPluginClass, such as when FFI is used for the
-implementation of one platform in a federated plugin:
-
-```yaml
-  plugin:
-    implements: some_other_plugin
-    platforms:
-      some_platform:
-        dartPluginClass: SomeClass
-        ffiPlugin: true
-```
-
-A plugin can have both FFI and method channels:
-
-```yaml
-  plugin:
-    platforms:
-      some_platform:
-        pluginClass: SomeName
-        ffiPlugin: true
-```
-
-The native build systems that are invoked by FFI (and method channel) plugins are:
-
-* For Linux: CMake.
-  * See the documentation in linux/CMakeLists.txt.
+`hook/build.dart` drives CMake and declares `libbluez_obex_native.so` as a
+bundled CodeAsset. Dart and Flutter consumers therefore build and package the
+native library automatically. Set `SKIP_NATIVE_BUILD` to skip the hook or
+`BLUEZ_OBEX_LIB` to load a specific prebuilt library during development.
 
 ## Binding to native code
 
@@ -118,9 +94,8 @@ await client.dispose();
 ## Verification
 
 ```sh
-flutter test test/codec_test.dart
-flutter test test/simulated_obex_integration_test.dart
-flutter analyze --fatal-infos
+dart test
+dart analyze
 cmake -S native -B build/native-tests -DBUILD_TESTING=ON
 cmake --build build/native-tests --target test_obex_types -j2
 ctest --test-dir build/native-tests --output-on-failure

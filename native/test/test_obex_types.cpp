@@ -5,6 +5,7 @@
 #include "obex_proxy_utils.h"
 
 #include <cassert>
+#include <stdexcept>
 
 namespace {
 
@@ -26,6 +27,7 @@ void test_session_props_roundtrip() {
   orig.source = "00:11:22:33:44:55";
   orig.destination = "AA:BB:CC:DD:EE:FF";
   orig.channel = 12;
+  orig.psm = 0x1001;
   orig.target = "pbap";
   orig.root = "/telecom";
 
@@ -38,6 +40,7 @@ void test_session_props_roundtrip() {
   assert(decoded.source == orig.source);
   assert(decoded.destination == orig.destination);
   assert(decoded.channel == orig.channel);
+  assert(decoded.psm == orig.psm);
   assert(decoded.target == orig.target);
   assert(decoded.root == orig.root);
 }
@@ -168,6 +171,11 @@ void test_message_props_roundtrip() {
   orig.deleted = false;
   orig.sent = false;
   orig.protected_ = true;
+  orig.deliveryStatus = "delivered";
+  orig.conversationId = 42;
+  orig.conversationName = "Project";
+  orig.direction = "incoming";
+  orig.attachmentMimeTypes = "image/jpeg";
 
   auto buf = glz::encode(orig);
   BlueZObexMessageProps decoded;
@@ -193,6 +201,11 @@ void test_message_props_roundtrip() {
   assert(decoded.deleted == orig.deleted);
   assert(decoded.sent == orig.sent);
   assert(decoded.protected_ == orig.protected_);
+  assert(decoded.deliveryStatus == orig.deliveryStatus);
+  assert(decoded.conversationId == orig.conversationId);
+  assert(decoded.conversationName == orig.conversationName);
+  assert(decoded.direction == orig.direction);
+  assert(decoded.attachmentMimeTypes == orig.attachmentMimeTypes);
 }
 
 void test_message_list_roundtrip() {
@@ -221,6 +234,20 @@ void test_message_list_roundtrip() {
   assert(decoded.messages[0].size == message.size);
   assert(decoded.messages[0].text == message.text);
   assert(decoded.messages[0].status == message.status);
+}
+
+void test_message_access_props_roundtrip() {
+  BlueZObexMessageAccessProps orig;
+  orig.objectPath = "/org/bluez/obex/client/session0";
+  orig.supportedTypes = {"EMAIL", "SMS_GSM", "MMS"};
+
+  auto buf = glz::encode(orig);
+  BlueZObexMessageAccessProps decoded;
+  auto end = glz::decode(buf.data(), 0, decoded);
+
+  assert(end == buf.size());
+  assert(decoded.objectPath == orig.objectPath);
+  assert(decoded.supportedTypes == orig.supportedTypes);
 }
 
 void test_filter_fields_roundtrip() {
@@ -283,6 +310,18 @@ void test_object_manager_roundtrips() {
   assert(removed_end == removed_buf.size());
   assert(decoded_removed.objectPath == removed.objectPath);
   assert(decoded_removed.interfaceName == removed.interfaceName);
+
+  BlueZObexObjectAdded added;
+  added.objectPath = "/org/bluez/obex/client/session0";
+  added.interfaceName = "org.bluez.obex.MessageAccess1";
+
+  auto added_buf = glz::encode(added);
+  BlueZObexObjectAdded decoded_added;
+  auto added_end = glz::decode(added_buf.data(), 0, decoded_added);
+
+  assert(added_end == added_buf.size());
+  assert(decoded_added.objectPath == added.objectPath);
+  assert(decoded_added.interfaceName == added.interfaceName);
 }
 
 void test_devices_roundtrip() {
@@ -311,8 +350,7 @@ void test_devices_roundtrip() {
   assert(decoded.devices[0].paired);
   assert(decoded.devices[0].connected);
   assert(decoded.devices[0].uuids.size() == 1u);
-  assert(decoded.devices[0].uuids[0] ==
-         "0000112f-0000-1000-8000-00805f9b34fb");
+  assert(decoded.devices[0].uuids[0] == "0000112f-0000-1000-8000-00805f9b34fb");
   assert(decoded.devices[1].address == "11:22:33:44:55:66");
   assert(decoded.devices[1].name == "Headset");
   assert(!decoded.devices[1].paired);
@@ -381,6 +419,32 @@ void test_object_manager_extract_transfer_props() {
   assert(transfer.filename == "/tmp/contacts.vcf");
 }
 
+void test_object_manager_extract_profile_props() {
+  ObexObjectManager::PropertiesMap phonebook_props;
+  phonebook_props["Folder"] = sdbus::Variant{std::string{"telecom/pb"}};
+  phonebook_props["FixedImageSize"] = sdbus::Variant{true};
+  const auto phonebook = ObexObjectManager::extract_phonebook_props(
+      "/org/bluez/obex/client/session0", phonebook_props);
+  assert(phonebook.folder == "telecom/pb");
+  assert(phonebook.fixedImageSize);
+
+  ObexObjectManager::PropertiesMap message_props;
+  message_props["Subject"] = sdbus::Variant{std::string{"Hello"}};
+  message_props["Read"] = sdbus::Variant{true};
+  const auto message = ObexObjectManager::extract_message_props(
+      "/org/bluez/obex/client/session0/message0", message_props);
+  assert(message.subject == "Hello");
+  assert(message.read);
+
+  ObexObjectManager::PropertiesMap message_access_props;
+  message_access_props["SupportedTypes"] =
+      sdbus::Variant{std::vector<std::string>{"EMAIL", "SMS_GSM"}};
+  const auto message_access = ObexObjectManager::extract_message_access_props(
+      "/org/bluez/obex/client/session0", message_access_props);
+  assert(message_access.supportedTypes.size() == 2u);
+  assert(message_access.supportedTypes[1] == "SMS_GSM");
+}
+
 void test_proxy_utils_variant_conversion() {
   obex::VariantMap props;
   props["Filename"] = sdbus::Variant{std::string{"/tmp/message.bmsg"}};
@@ -402,6 +466,41 @@ void test_proxy_utils_variant_conversion() {
   assert(normalized[3].value == "true");
 }
 
+void test_proxy_utils_filter_conversion() {
+  const auto filters =
+      obex::variant_map_from_strings({{"MaxCount", "50"},
+                                      {"SubjectLength", "120"},
+                                      {"Fields", "subject,sender"},
+                                      {"FilterAny", "TEL,EMAIL"},
+                                      {"Types", "sms,email"},
+                                      {"Read", "true"},
+                                      {"Format", "vcard30"}});
+
+  assert(filters.at("MaxCount").get<uint16_t>() == 50);
+  assert(filters.at("SubjectLength").get<uint8_t>() == 120);
+  assert(filters.at("Fields").get<std::vector<std::string>>().size() == 2u);
+  assert(filters.at("FilterAny").get<std::vector<std::string>>()[1] == "EMAIL");
+  assert(filters.at("Types").get<std::vector<std::string>>()[0] == "sms");
+  assert(filters.at("Read").get<bool>());
+  assert(filters.at("Format").get<std::string>() == "vcard30");
+
+  bool invalid_number_rejected = false;
+  try {
+    (void)obex::variant_map_from_strings({{"MaxCount", "-1"}});
+  } catch (const std::invalid_argument &) {
+    invalid_number_rejected = true;
+  }
+  assert(invalid_number_rejected);
+
+  bool invalid_bool_rejected = false;
+  try {
+    (void)obex::variant_map_from_strings({{"Read", "yes"}});
+  } catch (const std::invalid_argument &) {
+    invalid_bool_rejected = true;
+  }
+  assert(invalid_bool_rejected);
+}
+
 void test_proxy_utils_extract_phonebook_props() {
   obex::PropertiesMap props;
   props["Folder"] = sdbus::Variant{std::string{"telecom/pb"}};
@@ -413,8 +512,8 @@ void test_proxy_utils_extract_phonebook_props() {
       sdbus::Variant{std::string{"00000000000000000000000000000002"}};
   props["FixedImageSize"] = sdbus::Variant{true};
 
-  auto phonebook = obex::phonebook_props_from_map(
-      "/org/bluez/obex/client/session0", props);
+  auto phonebook =
+      obex::phonebook_props_from_map("/org/bluez/obex/client/session0", props);
 
   assert(phonebook.objectPath == "/org/bluez/obex/client/session0");
   assert(phonebook.folder == "telecom/pb");
@@ -482,6 +581,7 @@ int main() {
   test_message_folders_roundtrip();
   test_message_props_roundtrip();
   test_message_list_roundtrip();
+  test_message_access_props_roundtrip();
   test_filter_fields_roundtrip();
   test_transfer_result_roundtrip();
   test_object_manager_roundtrips();
@@ -489,7 +589,9 @@ int main() {
   test_error_roundtrip();
   test_object_manager_extract_session_props();
   test_object_manager_extract_transfer_props();
+  test_object_manager_extract_profile_props();
   test_proxy_utils_variant_conversion();
+  test_proxy_utils_filter_conversion();
   test_proxy_utils_extract_phonebook_props();
   test_proxy_utils_extract_message_props();
   return 0;

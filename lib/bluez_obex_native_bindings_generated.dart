@@ -203,6 +203,91 @@ class BluezObexNativeBindings {
             )
           >();
 
+  /// ── Transfer management ──────────────────────────────────────────────────
+  int bluez_obex_transfer_get_properties(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> transfer_path,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_transfer_get_properties(
+      handle,
+      transfer_path,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_transfer_get_propertiesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_transfer_get_properties');
+  late final _bluez_obex_transfer_get_properties =
+      _bluez_obex_transfer_get_propertiesPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
+  int bluez_obex_transfer_cancel(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> transfer_path,
+  ) {
+    return _bluez_obex_transfer_cancel(handle, transfer_path);
+  }
+
+  late final _bluez_obex_transfer_cancelPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+        >
+      >('bluez_obex_transfer_cancel');
+  late final _bluez_obex_transfer_cancel = _bluez_obex_transfer_cancelPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)>();
+
+  int bluez_obex_transfer_suspend(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> transfer_path,
+  ) {
+    return _bluez_obex_transfer_suspend(handle, transfer_path);
+  }
+
+  late final _bluez_obex_transfer_suspendPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+        >
+      >('bluez_obex_transfer_suspend');
+  late final _bluez_obex_transfer_suspend = _bluez_obex_transfer_suspendPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)>();
+
+  int bluez_obex_transfer_resume(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> transfer_path,
+  ) {
+    return _bluez_obex_transfer_resume(handle, transfer_path);
+  }
+
+  late final _bluez_obex_transfer_resumePtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)
+        >
+      >('bluez_obex_transfer_resume');
+  late final _bluez_obex_transfer_resume = _bluez_obex_transfer_resumePtr
+      .asFunction<int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)>();
+
   /// ── ObjectManager queries ──────────────────────────────────────────────────
   int bluez_obex_get_managed_objects(
     ffi.Pointer<ffi.Void> handle,
@@ -341,6 +426,61 @@ class BluezObexNativeBindings {
       .asFunction<
         int Function(
           ffi.Pointer<ffi.Void>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          int,
+        )
+      >();
+
+  int bluez_obex_phonebook_pull(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> phonebook_path,
+    ffi.Pointer<ffi.Char> vcard,
+    ffi.Pointer<ffi.Char> target_file,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
+    int filter_count,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_phonebook_pull(
+      handle,
+      phonebook_path,
+      vcard,
+      target_file,
+      filter_keys,
+      filter_values,
+      filter_count,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_phonebook_pullPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Int32,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_phonebook_pull');
+  late final _bluez_obex_phonebook_pull = _bluez_obex_phonebook_pullPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Void>,
+          ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
@@ -525,6 +665,42 @@ class BluezObexNativeBindings {
           >();
 
   /// ── Message Access Profile ─────────────────────────────────────────────────
+  int bluez_obex_message_access_get_properties(
+    ffi.Pointer<ffi.Void> handle,
+    ffi.Pointer<ffi.Char> message_access_path,
+    ffi.Pointer<ffi.Uint8> out,
+    int capacity,
+  ) {
+    return _bluez_obex_message_access_get_properties(
+      handle,
+      message_access_path,
+      out,
+      capacity,
+    );
+  }
+
+  late final _bluez_obex_message_access_get_propertiesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Void>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Uint8>,
+            ffi.Int32,
+          )
+        >
+      >('bluez_obex_message_access_get_properties');
+  late final _bluez_obex_message_access_get_properties =
+      _bluez_obex_message_access_get_propertiesPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Uint8>,
+              int,
+            )
+          >();
+
   int bluez_obex_message_access_set_folder(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> message_access_path,

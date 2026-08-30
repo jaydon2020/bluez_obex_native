@@ -12,6 +12,12 @@ import 'internal/library_loader.dart';
 
 final ffi.DynamicLibrary _dylib = loadBluezObexNative();
 
+final ffi.NativeFinalizer _clientFinalizer = ffi.NativeFinalizer(
+  _dylib.lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+    'bluez_obex_client_destroy',
+  ),
+);
+
 final BluezObexNativeBindings nativeBindings = BluezObexNativeBindings(_dylib);
 
 bool _dartDlInitialized = false;
@@ -34,10 +40,13 @@ class BlueZObexNativeException implements Exception {
   String toString() => 'BlueZObexNativeException($operation failed: $code)';
 }
 
-class BlueZObexNativeBridge {
+class BlueZObexNativeBridge implements ffi.Finalizable {
   final ffi.Pointer<ffi.Void> handle;
+  bool _disposed = false;
 
-  const BlueZObexNativeBridge(this.handle);
+  BlueZObexNativeBridge(this.handle) {
+    _clientFinalizer.attach(this, handle, detach: this);
+  }
 
   Uint8List readBytes(
     String operation,
@@ -84,6 +93,11 @@ class BlueZObexNativeBridge {
   }
 
   void dispose() {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    _clientFinalizer.detach(this);
     nativeBindings.bluez_obex_client_destroy(handle);
   }
 }
@@ -215,7 +229,27 @@ BlueZObexEvent decodeNativeEvent(Uint8List message) {
       message,
       1,
     ),
+    BlueZObexEventType.phonebook => GlazeCodec.decode<BlueZObexPhonebookProps>(
+      message,
+      1,
+    ),
+    BlueZObexEventType.phonebookEntries =>
+      GlazeCodec.decode<BlueZObexPhonebookEntries>(message, 1),
+    BlueZObexEventType.messageFolders =>
+      GlazeCodec.decode<BlueZObexMessageFolders>(message, 1),
+    BlueZObexEventType.message => GlazeCodec.decode<BlueZObexMessageProps>(
+      message,
+      1,
+    ),
+    BlueZObexEventType.messageAccess =>
+      GlazeCodec.decode<BlueZObexMessageAccessProps>(message, 1),
+    BlueZObexEventType.transferResult =>
+      GlazeCodec.decode<BlueZObexTransferResult>(message, 1),
     BlueZObexEventType.error => GlazeCodec.decode<BlueZObexError>(message, 1),
+    BlueZObexEventType.objectAdded => GlazeCodec.decode<BlueZObexObjectAdded>(
+      message,
+      1,
+    ),
     BlueZObexEventType.objectRemoved =>
       GlazeCodec.decode<BlueZObexObjectRemoved>(message, 1),
     BlueZObexEventType.unknown => message.sublist(1),
@@ -232,8 +266,10 @@ enum BlueZObexEventType {
   phonebookEntries(0x04),
   messageFolders(0x05),
   message(0x06),
+  messageAccess(0x07),
   transferResult(0x10),
   error(0x20),
+  objectAdded(0x7D),
   objectRemoved(0x7E),
   streamDone(0xFF),
   unknown(-1);

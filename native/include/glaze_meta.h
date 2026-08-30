@@ -2,9 +2,14 @@
 // Channel B payloads. Provides glz::meta<T> and glz::field() used by
 // bluez_types.h to describe struct fields for binary serialization.
 //
-// Vendored from native_comms and extended with encode/decode overloads for
-// BlueZ-specific types (int16_t, uint16_t, vector<uint8_t>, map, nested
-// structs).
+// Includes encode/decode overloads for the BlueZ-specific types used here
+// (int16_t, uint16_t, vector<uint8_t>, map, nested structs).
+//
+// WIRE FORMAT: string lengths and vector/map counts are uint32_t. Other
+// implementations of this encoding use uint64_t prefixes, so codecs ported
+// between them must adjust the prefix width. Reading a uint32_t prefix as a
+// uint64_t consumes four bytes of payload and produces a misleadingly huge
+// length. Readers must bounds-check every prefix before accessing payload data.
 
 #pragma once
 

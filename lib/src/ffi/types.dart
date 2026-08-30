@@ -15,6 +15,7 @@ class BlueZObexSessionProps {
   final String source;
   final String destination;
   final int channel;
+  final int psm;
   final String target;
   final String root;
 
@@ -23,6 +24,7 @@ class BlueZObexSessionProps {
     this.source = '',
     this.destination = '',
     this.channel = 0,
+    this.psm = 0,
     this.target = '',
     this.root = '',
   });
@@ -122,6 +124,11 @@ class BlueZObexMessageProps {
   final bool deleted;
   final bool sent;
   final bool protected;
+  final String deliveryStatus;
+  final int conversationId;
+  final String conversationName;
+  final String direction;
+  final String attachmentMimeTypes;
 
   const BlueZObexMessageProps({
     required this.objectPath,
@@ -143,6 +150,22 @@ class BlueZObexMessageProps {
     this.deleted = false,
     this.sent = false,
     this.protected = false,
+    this.deliveryStatus = '',
+    this.conversationId = 0,
+    this.conversationName = '',
+    this.direction = '',
+    this.attachmentMimeTypes = '',
+  });
+}
+
+/// org.bluez.obex.MessageAccess1 properties.
+class BlueZObexMessageAccessProps {
+  final String objectPath;
+  final List<String> supportedTypes;
+
+  const BlueZObexMessageAccessProps({
+    required this.objectPath,
+    this.supportedTypes = const [],
   });
 }
 
@@ -185,6 +208,17 @@ class BlueZObexManagedObjects {
     this.phonebooks = const [],
     this.messageAccesses = const [],
     this.messages = const [],
+  });
+}
+
+/// An OBEX interface added to the BlueZ object tree.
+class BlueZObexObjectAdded {
+  final String objectPath;
+  final String interfaceName;
+
+  const BlueZObexObjectAdded({
+    required this.objectPath,
+    required this.interfaceName,
   });
 }
 

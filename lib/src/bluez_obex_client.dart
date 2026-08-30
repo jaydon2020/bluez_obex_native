@@ -25,6 +25,11 @@ abstract class BlueZObexBackend {
   Future<BlueZObexSessionProps> sessionProperties(String sessionPath);
   Future<String> sessionCapabilities(String sessionPath);
 
+  Future<BlueZObexTransferProps> transferProperties(String transferPath);
+  Future<void> transferCancel(String transferPath);
+  Future<void> transferSuspend(String transferPath);
+  Future<void> transferResume(String transferPath);
+
   Future<BlueZObexPhonebookProps> phonebookProperties(String phonebookPath);
   Future<void> phonebookSelect(
     String phonebookPath,
@@ -33,6 +38,12 @@ abstract class BlueZObexBackend {
   );
   Future<BlueZObexTransferResult> phonebookPullAll(
     String phonebookPath,
+    String targetFile, {
+    Map<String, Object?> filters = const {},
+  });
+  Future<BlueZObexTransferResult> phonebookPull(
+    String phonebookPath,
+    String vcard,
     String targetFile, {
     Map<String, Object?> filters = const {},
   });
@@ -50,6 +61,9 @@ abstract class BlueZObexBackend {
   Future<void> phonebookUpdateVersion(String phonebookPath);
   Future<List<String>> phonebookListFilterFields(String phonebookPath);
 
+  Future<BlueZObexMessageAccessProps> messageAccessProperties(
+    String messageAccessPath,
+  );
   Future<void> messageAccessSetFolder(String messageAccessPath, String folder);
   Future<List<BlueZObexMessageFolder>> messageAccessListFolders(
     String messageAccessPath, {
@@ -134,6 +148,13 @@ class BlueZObexClient {
     return BlueZObexPhonebook._(this, objectPath);
   }
 
+  BlueZObexTransfer transfer(
+    String objectPath, [
+    BlueZObexTransferProps? props,
+  ]) {
+    return BlueZObexTransfer._(this, objectPath, props);
+  }
+
   BlueZObexMessageAccess messageAccess(String objectPath) {
     return BlueZObexMessageAccess._(this, objectPath);
   }
@@ -145,6 +166,29 @@ class BlueZObexClient {
   Future<void> dispose() {
     return _backend.dispose();
   }
+}
+
+/// An OBEX transfer that can be monitored and controlled.
+class BlueZObexTransfer {
+  final BlueZObexClient _client;
+  final String objectPath;
+  BlueZObexTransferProps? _lastProps;
+
+  BlueZObexTransfer._(this._client, this.objectPath, this._lastProps);
+
+  BlueZObexTransferProps? get lastProperties => _lastProps;
+
+  Future<BlueZObexTransferProps> properties() async {
+    final props = await _client._backend.transferProperties(objectPath);
+    _lastProps = props;
+    return props;
+  }
+
+  Future<void> cancel() => _client._backend.transferCancel(objectPath);
+
+  Future<void> suspend() => _client._backend.transferSuspend(objectPath);
+
+  Future<void> resume() => _client._backend.transferResume(objectPath);
 }
 
 /// A connected OBEX session.
@@ -202,6 +246,19 @@ class BlueZObexPhonebook {
     );
   }
 
+  Future<BlueZObexTransferResult> pull(
+    String vcard,
+    String targetFile, {
+    Map<String, Object?> filters = const {},
+  }) {
+    return _client._backend.phonebookPull(
+      objectPath,
+      vcard,
+      targetFile,
+      filters: filters,
+    );
+  }
+
   Future<List<BlueZObexPhonebookEntry>> list({
     Map<String, Object?> filters = const {},
   }) {
@@ -240,6 +297,10 @@ class BlueZObexMessageAccess {
   final String objectPath;
 
   BlueZObexMessageAccess._(this._client, this.objectPath);
+
+  Future<BlueZObexMessageAccessProps> properties() {
+    return _client._backend.messageAccessProperties(objectPath);
+  }
 
   Future<void> setFolder(String folder) {
     return _client._backend.messageAccessSetFolder(objectPath, folder);
@@ -330,12 +391,14 @@ class BlueZObexMessage {
 class NativeBlueZObexBackend implements BlueZObexBackend {
   final BlueZObexNativeBridge _bridge;
   final ReceivePort _receivePort;
+  final StreamSubscription<dynamic> _receiveSubscription;
   final StreamController<BlueZObexEvent> _eventsController;
   bool _disposed = false;
 
   NativeBlueZObexBackend._(
     this._bridge,
     this._receivePort,
+    this._receiveSubscription,
     this._eventsController,
   );
 
@@ -343,11 +406,15 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     initializeDartDl();
     final receivePort = ReceivePort();
     final eventsController = StreamController<BlueZObexEvent>.broadcast();
-    receivePort.listen((dynamic data) {
-      if (data is Uint8List) {
-        eventsController.add(decodeNativeEvent(data));
-      } else if (data is List<int>) {
-        eventsController.add(decodeNativeEvent(Uint8List.fromList(data)));
+    final receiveSubscription = receivePort.listen((dynamic data) {
+      try {
+        if (data is Uint8List) {
+          eventsController.add(decodeNativeEvent(data));
+        } else if (data is List<int>) {
+          eventsController.add(decodeNativeEvent(Uint8List.fromList(data)));
+        }
+      } catch (error, stackTrace) {
+        eventsController.addError(error, stackTrace);
       }
     });
 
@@ -356,6 +423,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     );
     if (handle == ffi.nullptr) {
       receivePort.close();
+      await receiveSubscription.cancel();
       await eventsController.close();
       throw const BlueZObexNativeException('bluez_obex_client_create', -1);
     }
@@ -363,6 +431,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     return NativeBlueZObexBackend._(
       BlueZObexNativeBridge(handle),
       receivePort,
+      receiveSubscription,
       eventsController,
     );
   }
@@ -472,6 +541,66 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
   }
 
   @override
+  Future<BlueZObexTransferProps> transferProperties(String transferPath) async {
+    final path = NativeString(transferPath);
+    try {
+      return _bridge.readGlaze<BlueZObexTransferProps>(
+        'bluez_obex_transfer_get_properties',
+        (out, capacity) => nativeBindings.bluez_obex_transfer_get_properties(
+          _bridge.handle,
+          path.pointer,
+          out,
+          capacity,
+        ),
+      );
+    } finally {
+      path.dispose();
+    }
+  }
+
+  @override
+  Future<void> transferCancel(String transferPath) async {
+    final path = NativeString(transferPath);
+    try {
+      _bridge.checkStatus(
+        'bluez_obex_transfer_cancel',
+        nativeBindings.bluez_obex_transfer_cancel(_bridge.handle, path.pointer),
+      );
+    } finally {
+      path.dispose();
+    }
+  }
+
+  @override
+  Future<void> transferSuspend(String transferPath) async {
+    final path = NativeString(transferPath);
+    try {
+      _bridge.checkStatus(
+        'bluez_obex_transfer_suspend',
+        nativeBindings.bluez_obex_transfer_suspend(
+          _bridge.handle,
+          path.pointer,
+        ),
+      );
+    } finally {
+      path.dispose();
+    }
+  }
+
+  @override
+  Future<void> transferResume(String transferPath) async {
+    final path = NativeString(transferPath);
+    try {
+      _bridge.checkStatus(
+        'bluez_obex_transfer_resume',
+        nativeBindings.bluez_obex_transfer_resume(_bridge.handle, path.pointer),
+      );
+    } finally {
+      path.dispose();
+    }
+  }
+
+  @override
   Future<BlueZObexPhonebookProps> phonebookProperties(
     String phonebookPath,
   ) async {
@@ -543,6 +672,40 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     } finally {
       nativeFilters.dispose();
       target.dispose();
+      path.dispose();
+    }
+  }
+
+  @override
+  Future<BlueZObexTransferResult> phonebookPull(
+    String phonebookPath,
+    String vcard,
+    String targetFile, {
+    Map<String, Object?> filters = const {},
+  }) async {
+    final path = NativeString(phonebookPath);
+    final vcardPtr = NativeString(vcard);
+    final target = NativeString(targetFile);
+    final nativeFilters = NativeStringMap(filters);
+    try {
+      return _bridge.readGlazeOnce<BlueZObexTransferResult>(
+        'bluez_obex_phonebook_pull',
+        (out, capacity) => nativeBindings.bluez_obex_phonebook_pull(
+          _bridge.handle,
+          path.pointer,
+          vcardPtr.pointer,
+          target.pointer,
+          nativeFilters.keys,
+          nativeFilters.values,
+          nativeFilters.count,
+          out,
+          capacity,
+        ),
+      );
+    } finally {
+      nativeFilters.dispose();
+      target.dispose();
+      vcardPtr.dispose();
       path.dispose();
     }
   }
@@ -678,6 +841,27 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
       );
     } finally {
       folderPtr.dispose();
+      path.dispose();
+    }
+  }
+
+  @override
+  Future<BlueZObexMessageAccessProps> messageAccessProperties(
+    String messageAccessPath,
+  ) async {
+    final path = NativeString(messageAccessPath);
+    try {
+      return _bridge.readGlaze<BlueZObexMessageAccessProps>(
+        'bluez_obex_message_access_get_properties',
+        (out, capacity) =>
+            nativeBindings.bluez_obex_message_access_get_properties(
+              _bridge.handle,
+              path.pointer,
+              out,
+              capacity,
+            ),
+      );
+    } finally {
       path.dispose();
     }
   }
@@ -902,6 +1086,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     _disposed = true;
     _bridge.dispose();
     _receivePort.close();
+    await _receiveSubscription.cancel();
     await _eventsController.close();
   }
 }
@@ -926,6 +1111,7 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
       StreamController<BlueZObexEvent>.broadcast();
   final Map<String, BlueZObexSessionProps> _sessions = {};
   final Map<String, BlueZObexPhonebookProps> _phonebooks = {};
+  final Map<String, BlueZObexTransferProps> _transfers = {};
   final Map<String, BlueZObexMessageProps> _messages = {};
   final List<BlueZObexPhonebookEntry> _contacts = const [
     BlueZObexPhonebookEntry(vcard: '1.vcf', name: 'Ada Lovelace'),
@@ -954,6 +1140,7 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
   Future<BlueZObexManagedObjects> getManagedObjects() async {
     return BlueZObexManagedObjects(
       sessions: _sessions.keys.toList(),
+      transfers: _transfers.keys.toList(),
       phonebooks: _phonebooks.keys.toList(),
       messageAccesses: _sessions.keys.toList(),
       messages: _messages.keys.toList(),
@@ -972,6 +1159,7 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
       source: '00:11:22:33:44:55',
       destination: destination,
       channel: 12,
+      psm: 0x1001,
       target: target.isEmpty ? 'pbap' : target,
       root: '/telecom',
     );
@@ -999,24 +1187,58 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
       status: 'complete',
       read: false,
     );
+    for (final interfaceName in const [
+      'org.bluez.obex.Session1',
+      'org.bluez.obex.PhonebookAccess1',
+      'org.bluez.obex.MessageAccess1',
+      'org.bluez.obex.Message1',
+    ]) {
+      _emitAdded(
+        interfaceName == 'org.bluez.obex.Message1' ? '$path/message0' : path,
+        interfaceName,
+      );
+    }
     _eventsController.add(BlueZObexEvent(BlueZObexEventType.session, props));
+    _eventsController.add(
+      BlueZObexEvent(BlueZObexEventType.phonebook, _phonebooks[path]),
+    );
+    _eventsController.add(
+      BlueZObexEvent(
+        BlueZObexEventType.messageAccess,
+        BlueZObexMessageAccessProps(
+          objectPath: path,
+          supportedTypes: const ['EMAIL', 'SMS_GSM', 'SMS_CDMA', 'MMS', 'IM'],
+        ),
+      ),
+    );
+    _eventsController.add(
+      BlueZObexEvent(BlueZObexEventType.message, _messages['$path/message0']),
+    );
     return props;
   }
 
   @override
   Future<void> removeSession(String sessionPath) async {
+    final removedTransfers = _transfers.values
+        .where((transfer) => transfer.session == sessionPath)
+        .map((transfer) => transfer.objectPath)
+        .toList();
+    final removedMessages = _messages.keys
+        .where((path) => path.startsWith('$sessionPath/'))
+        .toList();
     _sessions.remove(sessionPath);
     _phonebooks.remove(sessionPath);
+    _transfers.removeWhere((_, transfer) => transfer.session == sessionPath);
     _messages.removeWhere((path, _) => path.startsWith('$sessionPath/'));
-    _eventsController.add(
-      BlueZObexEvent(
-        BlueZObexEventType.objectRemoved,
-        BlueZObexObjectRemoved(
-          objectPath: sessionPath,
-          interfaceName: 'org.bluez.obex.Session1',
-        ),
-      ),
-    );
+    for (final path in removedTransfers) {
+      _emitRemoved(path, 'org.bluez.obex.Transfer1');
+    }
+    for (final path in removedMessages) {
+      _emitRemoved(path, 'org.bluez.obex.Message1');
+    }
+    _emitRemoved(sessionPath, 'org.bluez.obex.PhonebookAccess1');
+    _emitRemoved(sessionPath, 'org.bluez.obex.MessageAccess1');
+    _emitRemoved(sessionPath, 'org.bluez.obex.Session1');
   }
 
   @override
@@ -1028,6 +1250,26 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
   Future<String> sessionCapabilities(String sessionPath) async {
     _require(_sessions[sessionPath], sessionPath);
     return '<capabilities><service>PBAP</service><service>MAP</service></capabilities>';
+  }
+
+  @override
+  Future<BlueZObexTransferProps> transferProperties(String transferPath) async {
+    return _require(_transfers[transferPath], transferPath);
+  }
+
+  @override
+  Future<void> transferCancel(String transferPath) async {
+    _setTransferStatus(transferPath, 'cancelled');
+  }
+
+  @override
+  Future<void> transferSuspend(String transferPath) async {
+    _setTransferStatus(transferPath, 'suspended');
+  }
+
+  @override
+  Future<void> transferResume(String transferPath) async {
+    _setTransferStatus(transferPath, 'active');
   }
 
   @override
@@ -1062,8 +1304,25 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
   }) async {
     _require(_phonebooks[phonebookPath], phonebookPath);
     final file = File(targetFile);
-    await file.writeAsString(_contacts.map(_vcardFor).join('\n'));
+    file.writeAsStringSync(_contacts.map(_vcardFor).join('\n'));
     return _completeTransfer(phonebookPath, file.path, 'contacts.vcf');
+  }
+
+  @override
+  Future<BlueZObexTransferResult> phonebookPull(
+    String phonebookPath,
+    String vcard,
+    String targetFile, {
+    Map<String, Object?> filters = const {},
+  }) async {
+    _require(_phonebooks[phonebookPath], phonebookPath);
+    final entry = _contacts.where((candidate) => candidate.vcard == vcard);
+    if (entry.isEmpty) {
+      throw BlueZObexNativeException(vcard, -404);
+    }
+    final file = File(targetFile);
+    file.writeAsStringSync(_vcardFor(entry.single));
+    return _completeTransfer(phonebookPath, file.path, vcard);
   }
 
   @override
@@ -1107,6 +1366,17 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
   Future<List<String>> phonebookListFilterFields(String phonebookPath) async {
     _require(_phonebooks[phonebookPath], phonebookPath);
     return const ['MaxCount', 'Offset', 'Fields'];
+  }
+
+  @override
+  Future<BlueZObexMessageAccessProps> messageAccessProperties(
+    String messageAccessPath,
+  ) async {
+    _require(_sessions[messageAccessPath], messageAccessPath);
+    return BlueZObexMessageAccessProps(
+      objectPath: messageAccessPath,
+      supportedTypes: const ['EMAIL', 'SMS_GSM', 'SMS_CDMA', 'MMS', 'IM'],
+    );
   }
 
   @override
@@ -1174,6 +1444,10 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
       status: 'complete',
       sent: true,
     );
+    _emitAdded(path, 'org.bluez.obex.Message1');
+    _eventsController.add(
+      BlueZObexEvent(BlueZObexEventType.message, _messages[path]),
+    );
     return _completeTransfer(messageAccessPath, sourceFile, 'pushed.bmsg');
   }
 
@@ -1190,7 +1464,7 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
   }) async {
     final message = _require(_messages[messagePath], messagePath);
     final file = File(targetFile);
-    await file.writeAsString(
+    file.writeAsStringSync(
       'BEGIN:BMSG\nSUBJECT:${message.subject}\nTEXT:Simulated text message\nEND:BMSG\n',
     );
     return _completeTransfer(messagePath, file.path, 'message.bmsg');
@@ -1237,6 +1511,8 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
           : 0,
       filename: filename,
     );
+    _transfers[transferPath] = transfer;
+    _emitAdded(transferPath, 'org.bluez.obex.Transfer1');
     _eventsController.add(
       BlueZObexEvent(BlueZObexEventType.transfer, transfer),
     );
@@ -1246,6 +1522,47 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
         const BlueZObexProperty(key: 'Status', value: 'complete'),
         BlueZObexProperty(key: 'Filename', value: filename),
       ],
+    );
+  }
+
+  void _setTransferStatus(String transferPath, String status) {
+    final transfer = _require(_transfers[transferPath], transferPath);
+    final updated = BlueZObexTransferProps(
+      objectPath: transfer.objectPath,
+      status: status,
+      session: transfer.session,
+      name: transfer.name,
+      type: transfer.type,
+      time: transfer.time,
+      size: transfer.size,
+      transferred: transfer.transferred,
+      filename: transfer.filename,
+    );
+    _transfers[transferPath] = updated;
+    _eventsController.add(BlueZObexEvent(BlueZObexEventType.transfer, updated));
+  }
+
+  void _emitAdded(String objectPath, String interfaceName) {
+    _eventsController.add(
+      BlueZObexEvent(
+        BlueZObexEventType.objectAdded,
+        BlueZObexObjectAdded(
+          objectPath: objectPath,
+          interfaceName: interfaceName,
+        ),
+      ),
+    );
+  }
+
+  void _emitRemoved(String objectPath, String interfaceName) {
+    _eventsController.add(
+      BlueZObexEvent(
+        BlueZObexEventType.objectRemoved,
+        BlueZObexObjectRemoved(
+          objectPath: objectPath,
+          interfaceName: interfaceName,
+        ),
+      ),
     );
   }
 }
@@ -1295,5 +1612,10 @@ BlueZObexMessageProps _copyMessage(
     deleted: deleted ?? message.deleted,
     sent: message.sent,
     protected: message.protected,
+    deliveryStatus: message.deliveryStatus,
+    conversationId: message.conversationId,
+    conversationName: message.conversationName,
+    direction: message.direction,
+    attachmentMimeTypes: message.attachmentMimeTypes,
   );
 }

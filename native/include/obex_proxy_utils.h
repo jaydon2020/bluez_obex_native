@@ -13,6 +13,8 @@ namespace obex {
 using PropertiesMap = std::map<std::string, sdbus::Variant>;
 using VariantMap = std::map<std::string, sdbus::Variant>;
 
+VariantMap
+variant_map_from_strings(const std::map<std::string, std::string> &values);
 std::string variant_to_string(const sdbus::Variant &value);
 std::vector<BlueZObexProperty>
 variant_map_to_properties(const VariantMap &properties);
@@ -28,6 +30,9 @@ phonebook_props_from_map(const std::string &object_path,
                          const PropertiesMap &properties);
 BlueZObexMessageProps message_props_from_map(const std::string &object_path,
                                              const PropertiesMap &properties);
+BlueZObexMessageAccessProps
+message_access_props_from_map(const std::string &object_path,
+                              const PropertiesMap &properties);
 
 PropertiesMap get_all_properties(sdbus::IConnection &conn,
                                  const std::string &service,

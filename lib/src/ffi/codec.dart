@@ -31,6 +31,8 @@ class GlazeCodec {
       return _decodeObexMessageFolders(r) as T;
     } else if (T == BlueZObexMessageProps) {
       return _decodeObexMessageProps(r) as T;
+    } else if (T == BlueZObexMessageAccessProps) {
+      return _decodeObexMessageAccessProps(r) as T;
     } else if (T == BlueZObexMessages) {
       return _decodeObexMessages(r) as T;
     } else if (T == BlueZObexFilterFields) {
@@ -39,6 +41,8 @@ class GlazeCodec {
       return _decodeObexTransferResult(r) as T;
     } else if (T == BlueZObexManagedObjects) {
       return _decodeObexManagedObjects(r) as T;
+    } else if (T == BlueZObexObjectAdded) {
+      return _decodeObexObjectAdded(r) as T;
     } else if (T == BlueZObexObjectRemoved) {
       return _decodeObexObjectRemoved(r) as T;
     } else if (T == BlueZObexError) {
@@ -59,6 +63,7 @@ class GlazeCodec {
       source: r.readString(),
       destination: r.readString(),
       channel: r.readUint8(),
+      psm: r.readUint16(),
       target: r.readString(),
       root: r.readString(),
     );
@@ -126,6 +131,18 @@ class GlazeCodec {
       deleted: r.readBool(),
       sent: r.readBool(),
       protected: r.readBool(),
+      deliveryStatus: r.readString(),
+      conversationId: r.readUint64(),
+      conversationName: r.readString(),
+      direction: r.readString(),
+      attachmentMimeTypes: r.readString(),
+    );
+  }
+
+  static BlueZObexMessageAccessProps _decodeObexMessageAccessProps(_Reader r) {
+    return BlueZObexMessageAccessProps(
+      objectPath: r.readString(),
+      supportedTypes: r.readStringList(),
     );
   }
 
@@ -161,6 +178,13 @@ class GlazeCodec {
     );
   }
 
+  static BlueZObexObjectAdded _decodeObexObjectAdded(_Reader r) {
+    return BlueZObexObjectAdded(
+      objectPath: r.readString(),
+      interfaceName: r.readString(),
+    );
+  }
+
   static BlueZObexError _decodeObexError(_Reader r) {
     return BlueZObexError(
       objectPath: r.readString(),
@@ -182,10 +206,14 @@ class _Reader {
   _Reader(Uint8List bytes, int offset)
     : _data = bytes.buffer.asByteData(bytes.offsetInBytes),
       _length = bytes.length,
-      _offset = offset;
+      _offset = offset {
+    if (offset < 0 || offset > bytes.length) {
+      throw RangeError.range(offset, 0, bytes.length, 'offset');
+    }
+  }
 
   void _checkBounds(int needed) {
-    if (_offset + needed > _length) {
+    if (needed < 0 || needed > _length - _offset) {
       throw RangeError(
         'Codec read overrun: need $needed bytes at offset $_offset, '
         'but buffer is $_length bytes',
@@ -204,6 +232,13 @@ class _Reader {
     _checkBounds(1);
     final v = _data.getUint8(_offset);
     _offset += 1;
+    return v;
+  }
+
+  int readUint16() {
+    _checkBounds(2);
+    final v = _data.getUint16(_offset, Endian.little);
+    _offset += 2;
     return v;
   }
 
@@ -228,6 +263,7 @@ class _Reader {
 
   List<BlueZObexProperty> readObexPropertyList() {
     final count = _readUint32();
+    _checkElementCount(count, 8);
     return List.generate(
       count,
       (_) => BlueZObexProperty(key: readString(), value: readString()),
@@ -236,6 +272,7 @@ class _Reader {
 
   List<BlueZObexPhonebookEntry> readPhonebookEntryList() {
     final count = _readUint32();
+    _checkElementCount(count, 8);
     return List.generate(
       count,
       (_) => BlueZObexPhonebookEntry(vcard: readString(), name: readString()),
@@ -244,6 +281,7 @@ class _Reader {
 
   List<BlueZObexMessageFolder> readMessageFolderList() {
     final count = _readUint32();
+    _checkElementCount(count, 4);
     return List.generate(
       count,
       (_) => BlueZObexMessageFolder(name: readString()),
@@ -252,6 +290,7 @@ class _Reader {
 
   List<BlueZObexMessageProps> readMessagePropsList() {
     final count = _readUint32();
+    _checkElementCount(count, 90);
     return List.generate(
       count,
       (_) => GlazeCodec._decodeObexMessageProps(this),
@@ -260,7 +299,17 @@ class _Reader {
 
   List<String> readStringList() {
     final count = _readUint32();
+    _checkElementCount(count, 4);
     return List.generate(count, (_) => readString());
+  }
+
+  void _checkElementCount(int count, int minimumEncodedBytes) {
+    if (count > (_length - _offset) ~/ minimumEncodedBytes) {
+      throw RangeError(
+        'Codec list count $count cannot fit in '
+        '${_length - _offset} remaining bytes',
+      );
+    }
   }
 
   int _readUint32() {
@@ -272,6 +321,7 @@ class _Reader {
 
   List<BlueZDevice> readDeviceList() {
     final count = _readUint32();
+    _checkElementCount(count, 14);
     return List.generate(
       count,
       (_) => BlueZDevice(

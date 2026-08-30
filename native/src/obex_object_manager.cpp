@@ -7,9 +7,15 @@
 namespace {
 constexpr auto kSessionIface = "org.bluez.obex.Session1";
 constexpr auto kTransferIface = "org.bluez.obex.Transfer1";
+constexpr auto kPhonebookIface = "org.bluez.obex.PhonebookAccess1";
+constexpr auto kMessageAccessIface = "org.bluez.obex.MessageAccess1";
+constexpr auto kMessageIface = "org.bluez.obex.Message1";
 
 bool is_obex_interface(const std::string &interface_name) {
-  return interface_name == kSessionIface || interface_name == kTransferIface;
+  return interface_name == kSessionIface || interface_name == kTransferIface ||
+         interface_name == kPhonebookIface ||
+         interface_name == kMessageAccessIface ||
+         interface_name == kMessageIface;
 }
 } // namespace
 
@@ -65,6 +71,7 @@ void ObexObjectManager::on_interfaces_added(
       std::scoped_lock lock(mutex_);
       interfaces_by_path_[path].insert(interface_name);
     }
+    post_added(path, interface_name);
     should_subscribe = true;
     post_properties(path, interface_name, &properties);
   }
@@ -143,6 +150,12 @@ void ObexObjectManager::post_properties(const std::string &object_path,
       post_glaze(0x01, extract_session_props(object_path, *props));
     } else if (interface_name == kTransferIface) {
       post_glaze(0x02, extract_transfer_props(object_path, *props));
+    } else if (interface_name == kPhonebookIface) {
+      post_glaze(0x03, extract_phonebook_props(object_path, *props));
+    } else if (interface_name == kMessageIface) {
+      post_glaze(0x06, extract_message_props(object_path, *props));
+    } else if (interface_name == kMessageAccessIface) {
+      post_glaze(0x07, extract_message_access_props(object_path, *props));
     }
   } catch (const sdbus::Error &e) {
     // Silently ignore errors on objects that were removed before we could
@@ -162,6 +175,14 @@ void ObexObjectManager::post_removed(const std::string &object_path,
   removed.objectPath = object_path;
   removed.interfaceName = interface_name;
   post_glaze(0x7E, removed);
+}
+
+void ObexObjectManager::post_added(const std::string &object_path,
+                                   const std::string &interface_name) {
+  BlueZObexObjectAdded added;
+  added.objectPath = object_path;
+  added.interfaceName = interface_name;
+  post_glaze(0x7D, added);
 }
 
 void ObexObjectManager::post_error(const std::string &object_path,
@@ -184,6 +205,24 @@ BlueZObexTransferProps
 ObexObjectManager::extract_transfer_props(const std::string &object_path,
                                           const PropertiesMap &props) {
   return obex::transfer_props_from_map(object_path, props);
+}
+
+BlueZObexPhonebookProps
+ObexObjectManager::extract_phonebook_props(const std::string &object_path,
+                                           const PropertiesMap &props) {
+  return obex::phonebook_props_from_map(object_path, props);
+}
+
+BlueZObexMessageProps
+ObexObjectManager::extract_message_props(const std::string &object_path,
+                                         const PropertiesMap &props) {
+  return obex::message_props_from_map(object_path, props);
+}
+
+BlueZObexMessageAccessProps
+ObexObjectManager::extract_message_access_props(const std::string &object_path,
+                                                const PropertiesMap &props) {
+  return obex::message_access_props_from_map(object_path, props);
 }
 
 template <typename T>

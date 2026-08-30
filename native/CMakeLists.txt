@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(bluez_obex_native_library VERSION 0.0.1 LANGUAGES C CXX)
 
+option(BLUEZ_HOOK_BUILD "Build is driven by the Dart native-assets hook" OFF)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -24,6 +26,7 @@ set(BLUEZ_OBEX_NATIVE_SOURCES
   src/obex_phonebook_proxy.cpp
   src/obex_proxy_utils.cpp
   src/obex_session_proxy.cpp
+  src/obex_transfer_proxy.cpp
 )
 
 add_library(bluez_obex_native_core STATIC

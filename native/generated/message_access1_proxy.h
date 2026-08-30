@@ -56,10 +56,9 @@ public:
         return result;
     }
 
-    // BlueZ obexd returns a{oa{sv}} for ListMessages, not a(oa{sv}).
-    std::map<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>> ListMessages(const std::string& folder, const std::map<std::string, sdbus::Variant>& filter)
+    std::vector<sdbus::Struct<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>> ListMessages(const std::string& folder, const std::map<std::string, sdbus::Variant>& filter)
     {
-        std::map<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>> result;
+        std::vector<sdbus::Struct<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>> result;
         m_proxy.callMethod("ListMessages").onInterface(INTERFACE_NAME).withArguments(folder, filter).storeResultsTo(result);
         return result;
     }
@@ -74,6 +73,12 @@ public:
         std::tuple<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>> result;
         m_proxy.callMethod("PushMessage").onInterface(INTERFACE_NAME).withArguments(sourcefile, folder, args).storeResultsTo(result);
         return result;
+    }
+
+public:
+    std::vector<std::string> SupportedTypes()
+    {
+        return m_proxy.getProperty("SupportedTypes").onInterface(INTERFACE_NAME).get<std::vector<std::string>>();
     }
 
 private:

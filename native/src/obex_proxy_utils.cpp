@@ -1,6 +1,8 @@
 #include "obex_proxy_utils.h"
 
+#include <charconv>
 #include <sstream>
+#include <stdexcept>
 #include <utility>
 
 namespace {
@@ -21,9 +23,96 @@ template <typename T>
 std::string integral_to_string(const sdbus::Variant &value) {
   return std::to_string(value.get<T>());
 }
+
+bool parse_uint16(const std::string &value, uint16_t &out) {
+  uint32_t parsed{};
+  const auto *begin = value.data();
+  const auto *end = value.data() + value.size();
+  const auto [ptr, ec] = std::from_chars(begin, end, parsed);
+  if (ec != std::errc{} || ptr != end || parsed > UINT16_MAX) {
+    return false;
+  }
+  out = static_cast<uint16_t>(parsed);
+  return true;
+}
+
+bool parse_uint8(const std::string &value, uint8_t &out) {
+  uint16_t parsed{};
+  if (!parse_uint16(value, parsed) || parsed > UINT8_MAX) {
+    return false;
+  }
+  out = static_cast<uint8_t>(parsed);
+  return true;
+}
+
+std::vector<std::string> split_csv(const std::string &value) {
+  std::vector<std::string> result;
+  size_t start = 0;
+  while (start <= value.size()) {
+    const auto comma = value.find(',', start);
+    const auto end = comma == std::string::npos ? value.size() : comma;
+    if (end > start) {
+      result.push_back(value.substr(start, end - start));
+    }
+    if (comma == std::string::npos) {
+      break;
+    }
+    start = comma + 1;
+  }
+  return result;
+}
+
+bool is_uint16_key(const std::string &key) {
+  return key == "MaxCount" || key == "Offset" || key == "ListStartOffset" ||
+         key == "StartOffset";
+}
+
+bool is_string_array_key(const std::string &key) {
+  return key == "Fields" || key == "Filter" || key == "FilterAll" ||
+         key == "FilterAny" || key == "Types";
+}
+
+bool is_bool_key(const std::string &key) {
+  return key == "ResetNewMissedCalls" || key == "Read" || key == "Priority" ||
+         key == "Transparent" || key == "Retry";
+}
 } // namespace
 
 namespace obex {
+
+VariantMap
+variant_map_from_strings(const std::map<std::string, std::string> &values) {
+  VariantMap result;
+  for (const auto &[key, value] : values) {
+    if (key.empty()) {
+      continue;
+    }
+
+    uint16_t parsed_uint16{};
+    uint8_t parsed_uint8{};
+    if (is_uint16_key(key)) {
+      if (!parse_uint16(value, parsed_uint16)) {
+        throw std::invalid_argument(key + " must be a uint16");
+      }
+      result[key] = sdbus::Variant{parsed_uint16};
+    } else if (key == "SubjectLength") {
+      if (!parse_uint8(value, parsed_uint8)) {
+        throw std::invalid_argument(key + " must be a uint8");
+      }
+      result[key] = sdbus::Variant{parsed_uint8};
+    } else if (is_string_array_key(key)) {
+      result[key] = sdbus::Variant{split_csv(value)};
+    } else if (is_bool_key(key)) {
+      if (value != "true" && value != "false") {
+        throw std::invalid_argument(key + " must be a bool");
+      }
+      result[key] = sdbus::Variant{value == "true"};
+    } else {
+      result[key] = sdbus::Variant{value};
+    }
+  }
+  return result;
+}
 
 std::string variant_to_string(const sdbus::Variant &value) {
   try {
@@ -93,6 +182,7 @@ BlueZObexSessionProps session_props_from_map(const std::string &object_path,
   session.destination =
       get_property_value<std::string>(properties, "Destination");
   session.channel = get_property_value<uint8_t>(properties, "Channel");
+  session.psm = get_property_value<uint16_t>(properties, "PSM");
   session.target = get_property_value<std::string>(properties, "Target");
   session.root = get_property_value<std::string>(properties, "Root");
   return session;
@@ -158,7 +248,26 @@ BlueZObexMessageProps message_props_from_map(const std::string &object_path,
   message.deleted = get_property_value<bool>(properties, "Deleted");
   message.sent = get_property_value<bool>(properties, "Sent");
   message.protected_ = get_property_value<bool>(properties, "Protected");
+  message.deliveryStatus =
+      get_property_value<std::string>(properties, "DeliveryStatus");
+  message.conversationId =
+      get_property_value<uint64_t>(properties, "ConversationId");
+  message.conversationName =
+      get_property_value<std::string>(properties, "ConversationName");
+  message.direction = get_property_value<std::string>(properties, "Direction");
+  message.attachmentMimeTypes =
+      get_property_value<std::string>(properties, "AttachmentMimeTypes");
   return message;
+}
+
+BlueZObexMessageAccessProps
+message_access_props_from_map(const std::string &object_path,
+                              const PropertiesMap &properties) {
+  BlueZObexMessageAccessProps message_access;
+  message_access.objectPath = object_path;
+  message_access.supportedTypes = get_property_value<std::vector<std::string>>(
+      properties, "SupportedTypes");
+  return message_access;
 }
 
 PropertiesMap get_all_properties(sdbus::IConnection &conn,

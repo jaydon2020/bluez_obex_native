@@ -7,6 +7,7 @@
     <property name="Source" type="s" access="read"/>
     <property name="Destination" type="s" access="read"/>
     <property name="Channel" type="y" access="read"/>
+    <property name="PSM" type="q" access="read"/>
     <property name="Target" type="s" access="read"/>
     <property name="Root" type="s" access="read"/>
   </interface>

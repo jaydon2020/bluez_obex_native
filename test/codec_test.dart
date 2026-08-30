@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:bluez_obex_native/src/ffi/codec.dart';
 import 'package:bluez_obex_native/src/ffi/types.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 /// Helper: encode a string as length-prefixed UTF-8 (matches glaze_meta.h).
 void _writeString(BytesBuilder b, String s) {
@@ -19,6 +19,11 @@ void _writeBool(BytesBuilder b, bool v) {
 
 void _writeUint8(BytesBuilder b, int v) {
   b.addByte(v);
+}
+
+void _writeUint16(BytesBuilder b, int v) {
+  final d = ByteData(2)..setUint16(0, v, Endian.little);
+  b.add(d.buffer.asUint8List());
 }
 
 void _writeUint32(BytesBuilder b, int v) {
@@ -107,6 +112,11 @@ void _writeMessageProps(BytesBuilder b) {
   _writeBool(b, false);
   _writeBool(b, false);
   _writeBool(b, true);
+  _writeString(b, 'delivered');
+  _writeUint64(b, 42);
+  _writeString(b, 'Project');
+  _writeString(b, 'incoming');
+  _writeString(b, 'image/jpeg');
 }
 
 void main() {
@@ -131,6 +141,7 @@ void main() {
       _writeString(b, '00:11:22:33:44:55');
       _writeString(b, 'AA:BB:CC:DD:EE:FF');
       _writeUint8(b, 12);
+      _writeUint16(b, 0x1001);
       _writeString(b, 'pbap');
       _writeString(b, '/telecom');
 
@@ -143,6 +154,7 @@ void main() {
       expect(props.source, '00:11:22:33:44:55');
       expect(props.destination, 'AA:BB:CC:DD:EE:FF');
       expect(props.channel, 12);
+      expect(props.psm, 0x1001);
       expect(props.target, 'pbap');
       expect(props.root, '/telecom');
     });
@@ -284,6 +296,25 @@ void main() {
       expect(props.deleted, false);
       expect(props.sent, false);
       expect(props.protected, true);
+      expect(props.deliveryStatus, 'delivered');
+      expect(props.conversationId, 42);
+      expect(props.conversationName, 'Project');
+      expect(props.direction, 'incoming');
+      expect(props.attachmentMimeTypes, 'image/jpeg');
+    });
+
+    test('decodes BlueZObexMessageAccessProps', () {
+      final b = BytesBuilder();
+      _writeString(b, '/org/bluez/obex/client/session0');
+      _writeStringList(b, ['EMAIL', 'SMS_GSM', 'MMS']);
+
+      final props = GlazeCodec.decode<BlueZObexMessageAccessProps>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(props.objectPath, '/org/bluez/obex/client/session0');
+      expect(props.supportedTypes, ['EMAIL', 'SMS_GSM', 'MMS']);
     });
 
     test('decodes BlueZObexMessages', () {
@@ -375,6 +406,20 @@ void main() {
       expect(result.interfaceName, 'org.bluez.obex.Transfer1');
     });
 
+    test('decodes BlueZObexObjectAdded', () {
+      final b = BytesBuilder();
+      _writeString(b, '/org/bluez/obex/client/session0');
+      _writeString(b, 'org.bluez.obex.MessageAccess1');
+
+      final result = GlazeCodec.decode<BlueZObexObjectAdded>(
+        Uint8List.fromList(b.toBytes()),
+        0,
+      );
+
+      expect(result.objectPath, '/org/bluez/obex/client/session0');
+      expect(result.interfaceName, 'org.bluez.obex.MessageAccess1');
+    });
+
     test('decodes BlueZObexError', () {
       final b = BytesBuilder();
       _writeString(b, '/org/bluez/obex/client/session0');
@@ -432,6 +477,47 @@ void main() {
       expect(
         () => GlazeCodec.decode<BlueZObexSessionProps>(data, 0),
         throwsRangeError,
+      );
+    });
+
+    test('rejects offsets outside the input', () {
+      final data = Uint8List(0);
+      expect(
+        () => GlazeCodec.decode<BlueZObexProperty>(data, -1),
+        throwsRangeError,
+      );
+      expect(
+        () => GlazeCodec.decode<BlueZObexProperty>(data, 1),
+        throwsRangeError,
+      );
+    });
+
+    test('rejects impossible list counts before allocating', () {
+      final data = ByteData(4)..setUint32(0, 0xffffffff, Endian.little);
+
+      expect(
+        () => GlazeCodec.decode<BlueZObexPhonebookEntries>(
+          data.buffer.asUint8List(),
+          0,
+        ),
+        throwsRangeError,
+      );
+      expect(
+        () =>
+            GlazeCodec.decode<BlueZObexMessages>(data.buffer.asUint8List(), 0),
+        throwsRangeError,
+      );
+      expect(
+        () => GlazeCodec.decode<BlueZDevices>(data.buffer.asUint8List(), 0),
+        throwsRangeError,
+      );
+    });
+
+    test('rejects invalid UTF-8', () {
+      final data = Uint8List.fromList([1, 0, 0, 0, 0xff, 0, 0, 0, 0]);
+      expect(
+        () => GlazeCodec.decode<BlueZObexProperty>(data, 0),
+        throwsFormatException,
       );
     });
   });
