@@ -30,6 +30,20 @@ struct BluezObexClientContext {
   std::unique_ptr<ObexObjectManager> object_manager;
   Dart_Port_DL events_port{};
   std::thread event_loop;
+  std::atomic_bool failed{false};
+
+  void stop() noexcept {
+    try {
+      conn->leaveEventLoop();
+    } catch (...) {
+      // The bus may already be disconnected. The loop reports that failure.
+    }
+    if (event_loop.joinable()) event_loop.join();
+  }
+
+  ~BluezObexClientContext() {
+    if (conn) stop();
+  }
 };
 
 namespace {
@@ -63,7 +77,8 @@ std::shared_ptr<BluezObexClientContext> client_for(void *handle) {
   auto &clients = registry();
   const std::lock_guard lock(clients.mutex);
   const auto it = clients.clients.find(token_of(handle));
-  return it == clients.clients.end() ? nullptr : it->second;
+  return it == clients.clients.end() || it->second->failed.load()
+             ? nullptr : it->second;
 }
 
 int copy_payload(const std::vector<uint8_t> &payload, uint8_t *out,
@@ -170,7 +185,17 @@ FFI_PLUGIN_EXPORT void *bluez_obex_client_create(int64_t events_port) {
         std::make_unique<ObexObjectManager>(*ctx->conn, ctx->events_port);
     ctx->object_manager->get_managed_objects();
     ctx->event_loop =
-        std::thread([conn = ctx->conn.get()]() { conn->enterEventLoop(); });
+        std::thread([context = ctx.get()]() {
+          try {
+            context->conn->enterEventLoop();
+          } catch (const std::exception &error) {
+            context->failed.store(true);
+            context->object_manager->connection_failed(error.what());
+          } catch (...) {
+            context->failed.store(true);
+            context->object_manager->connection_failed("Unknown event loop failure");
+          }
+        });
     std::shared_ptr<BluezObexClientContext> client = std::move(ctx);
     uint64_t id{};
     {
@@ -201,10 +226,7 @@ FFI_PLUGIN_EXPORT void bluez_obex_client_destroy(void *handle) {
     ctx = std::move(it->second);
     clients.clients.erase(it);
   }
-  ctx->conn->leaveEventLoop();
-  if (ctx->event_loop.joinable()) {
-    ctx->event_loop.join();
-  }
+  ctx->stop();
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_client_create_session(void *handle,

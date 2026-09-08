@@ -24,6 +24,7 @@ public:
   ObexObjectManager &operator=(const ObexObjectManager &) = delete;
 
   void get_managed_objects();
+  void connection_failed(const std::string &message) noexcept;
 
   static BlueZObexSessionProps
   extract_session_props(const std::string &object_path,

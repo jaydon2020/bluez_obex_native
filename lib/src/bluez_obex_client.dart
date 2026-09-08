@@ -409,7 +409,12 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     final receiveSubscription = receivePort.listen((dynamic data) {
       try {
         if (data is Uint8List) {
-          eventsController.add(decodeNativeEvent(data));
+          final event = decodeNativeEvent(data);
+          eventsController.add(event);
+          if (event.type == BlueZObexEventType.streamDone) {
+            receivePort.close();
+            unawaited(eventsController.close());
+          }
         } else if (data is List<int>) {
           eventsController.add(decodeNativeEvent(Uint8List.fromList(data)));
         }

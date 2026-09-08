@@ -249,3 +249,12 @@ void ObexObjectManager::post_sentinel(uint8_t discriminator) {
   std::vector<uint8_t> payload;
   post_bytes(discriminator, payload);
 }
+
+void ObexObjectManager::connection_failed(const std::string &message) noexcept {
+  try {
+    post_error("/", "org.bluez.obex.Error.Disconnected", message);
+    post_sentinel(0xFF);
+  } catch (...) {
+    // Never let reporting failure escape the native event thread.
+  }
+}
