@@ -19,10 +19,19 @@ try:
         os.environ.get('DART_EXECUTABLE', 'dart'),
         '--packages=' + str(root / '.dart_tool/package_config.json'),
         str(root / 'test/support/native_scenarios.dart'), scenario],
-        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if scenario == 'disconnect':
+        cwd=root, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if scenario in ('disconnect', 'restart'):
         assert child.stdout.readline().strip() == 'connected'
-        bus.terminate()
+        if scenario == 'disconnect':
+            bus.terminate()
+        else:
+            service.terminate()
+            service.wait(timeout=5)
+            service = subprocess.Popen([sys.executable, str(root / 'test/support/fake_obex.py')],
+                                       env=env, stdout=subprocess.PIPE, text=True)
+            assert service.stdout.readline().strip() == 'ready'
+            child.stdin.write('restarted\n')
+            child.stdin.flush()
     out, err = child.communicate(timeout=20)
     print(out, end='')
     print(err, end='', file=sys.stderr)

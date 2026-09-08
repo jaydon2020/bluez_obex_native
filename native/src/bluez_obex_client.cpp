@@ -88,7 +88,8 @@ std::shared_ptr<BluezObexClientContext> client_for(void *handle) {
   auto &clients = registry();
   const std::lock_guard lock(clients.mutex);
   const auto it = clients.clients.find(token_of(handle));
-  return it == clients.clients.end() || it->second->failed.load()
+  return it == clients.clients.end() || it->second->failed.load() ||
+                     it->second->object_manager->failed()
              ? nullptr : it->second;
 }
 

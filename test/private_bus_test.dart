@@ -10,6 +10,7 @@ void main() {
     'responsive',
     'large_result',
     'folder_failure',
+    'restart',
   ]) {
     test('native private bus: $scenario', () async {
       final dependencies = await Process.run('/usr/bin/python3', [

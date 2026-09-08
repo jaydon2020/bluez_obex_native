@@ -31,7 +31,10 @@ await client.dispose();
 The Dart API exposes every method and property in the bundled current BlueZ
 `Client1`, `Session1`, `Transfer1`, `PhonebookAccess1`, `MessageAccess1`, and
 `Message1` interfaces. ObjectManager additions, removals, and property changes
-are delivered through `client.events`.
+are delivered through `client.events`. Bus disconnection or an OBEX service
+restart emits an error and `streamDone`, then closes the stream. Discard the
+old object proxies, dispose the client, and connect again to obtain fresh state.
+Always await `client.dispose()` to release its worker isolate and bus connection.
 
 For CI and local development without Bluetooth hardware, use the simulated
 endpoint:

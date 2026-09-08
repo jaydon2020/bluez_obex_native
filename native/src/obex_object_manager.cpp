@@ -22,6 +22,17 @@ bool is_obex_interface(const std::string &interface_name) {
 ObexObjectManager::ObexObjectManager(sdbus::IConnection &conn,
                                      Dart_Port_DL events_port)
     : conn_(conn), events_port_(events_port) {
+  owner_proxy_ = sdbus::createProxy(conn_, sdbus::ServiceName{"org.freedesktop.DBus"},
+                                  sdbus::ObjectPath{"/org/freedesktop/DBus"});
+  owner_proxy_->uponSignal("NameOwnerChanged")
+      .onInterface("org.freedesktop.DBus")
+      .call([this](const std::string &name, const std::string &old_owner,
+                   const std::string &new_owner) {
+        if (name == kObexService && !old_owner.empty() && old_owner != new_owner) {
+          connection_failed("OBEX service owner changed; create a new client");
+        }
+      });
+
   root_proxy_ = sdbus::createProxy(conn_, sdbus::ServiceName{kObexService},
                                    sdbus::ObjectPath{kObexRootPath});
 
@@ -60,6 +71,7 @@ void ObexObjectManager::get_managed_objects() {
 
 void ObexObjectManager::on_interfaces_added(
     const sdbus::ObjectPath &object_path, const InterfacesMap &interfaces) {
+  if (failed()) return;
   const std::string path = object_path;
   bool should_subscribe = false;
 
@@ -84,6 +96,7 @@ void ObexObjectManager::on_interfaces_added(
 void ObexObjectManager::on_interfaces_removed(
     const sdbus::ObjectPath &object_path,
     const std::vector<std::string> &interfaces) {
+  if (failed()) return;
   const std::string path = object_path;
 
   for (const auto &interface_name : interfaces) {
@@ -118,7 +131,7 @@ void ObexObjectManager::subscribe_properties(const std::string &object_path) {
              object_path](const std::string &interface_name,
                           const std::map<std::string, sdbus::Variant> &changed,
                           const std::vector<std::string> &invalidated) {
-        if (!is_obex_interface(interface_name)) return;
+        if (failed() || !is_obex_interface(interface_name)) return;
         PropertiesMap snapshot;
         {
           std::scoped_lock lock(mutex_);
@@ -280,7 +293,13 @@ void ObexObjectManager::post_sentinel(uint8_t discriminator) {
 }
 
 void ObexObjectManager::connection_failed(const std::string &message) noexcept {
+  if (failed_.exchange(true)) return;
   try {
+    {
+      std::scoped_lock lock(mutex_);
+      interfaces_by_path_.clear();
+      property_proxies_.clear();
+    }
     post_error("/", "org.bluez.obex.Error.Disconnected", message);
     post_sentinel(0xFF);
   } catch (...) {

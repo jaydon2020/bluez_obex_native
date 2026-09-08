@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:bluez_obex_native/bluez_obex_native.dart';
 
 void check(bool condition, String message) {
@@ -11,7 +12,7 @@ Future<void> main(List<String> args) async {
   final done = Completer<void>();
   final sub = client.events.listen(events.add, onDone: done.complete);
   try {
-    if (args.single == 'disconnect') {
+    if (args.single == 'disconnect' || args.single == 'restart') {
       print('connected');
       await done.future.timeout(const Duration(seconds: 5));
       check(
@@ -22,6 +23,18 @@ Future<void> main(List<String> args) async {
         events.any((e) => e.type == BlueZObexEventType.streamDone),
         'Missing terminal event',
       );
+      if (args.single == 'restart') {
+        try {
+          await client.getManagedObjects();
+          throw StateError('Used stale client after service restart');
+        } on BlueZObexNativeException {
+          /* expected */
+        }
+        await stdin.first;
+        final replacement = await BlueZObexClient.connect();
+        await replacement.getManagedObjects();
+        await replacement.dispose();
+      }
     } else if (args.single == 'completion') {
       final removed = client.events.firstWhere(
         (e) => e.type == BlueZObexEventType.objectRemoved,

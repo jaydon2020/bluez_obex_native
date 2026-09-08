@@ -2,6 +2,7 @@
 
 #include <sdbus-c++/sdbus-c++.h>
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -25,6 +26,7 @@ public:
 
   void get_managed_objects();
   void connection_failed(const std::string &message) noexcept;
+  bool failed() const { return failed_.load(); }
 
   static BlueZObexSessionProps
   extract_session_props(const std::string &object_path,
@@ -80,6 +82,8 @@ private:
   sdbus::IConnection &conn_;
   Dart_Port_DL events_port_;
   std::unique_ptr<sdbus::IProxy> root_proxy_;
+  std::unique_ptr<sdbus::IProxy> owner_proxy_;
+  std::atomic_bool failed_{false};
 
   std::mutex mutex_;
   std::map<std::string, std::unique_ptr<sdbus::IProxy>> property_proxies_;
