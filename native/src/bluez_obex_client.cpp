@@ -35,13 +35,14 @@ struct BluezObexClientContext {
   std::atomic_bool failed{false};
 
   void stop() noexcept {
+    if (!event_loop.joinable())
+      return;
     try {
       conn->leaveEventLoop();
     } catch (...) {
       // The bus may already be disconnected. The loop reports that failure.
     }
-    if (event_loop.joinable())
-      event_loop.join();
+    event_loop.join();
   }
 
   ~BluezObexClientContext() {
