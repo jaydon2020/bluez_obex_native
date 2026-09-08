@@ -14,6 +14,11 @@ void main(List<String> args) async {
       return;
     }
 
+    validateNativeTarget(
+      input.config.code.targetOS,
+      input.config.code.targetArchitecture,
+    );
+
     final packageRoot = input.packageRoot.toFilePath();
     final nativeRoot = '${packageRoot}native';
     final buildDir = input.outputDirectory.resolve('cmake/').toFilePath();
@@ -68,23 +73,7 @@ void main(List<String> args) async {
       ),
     );
 
-    for (final directory in ['src', 'include', 'generated']) {
-      final dir = Directory('$nativeRoot/$directory');
-      if (!dir.existsSync()) continue;
-      for (final entity in dir.listSync(recursive: true)) {
-        if (entity is! File) continue;
-        if (const [
-          '.cpp',
-          '.cc',
-          '.c',
-          '.hpp',
-          '.h',
-        ].any(entity.path.endsWith)) {
-          output.dependencies.add(entity.uri);
-        }
-      }
-    }
-    output.dependencies.add(Uri.file('$nativeRoot/CMakeLists.txt'));
+    output.dependencies.addAll(nativeDependencies(Directory(nativeRoot)));
 
     stderr.writeln('libbluez_obex_native built: ${library.path}');
   });
@@ -110,4 +99,51 @@ Future<void> _run(String executable, List<String> arguments) async {
 Future<bool> _which(String executable) async {
   final result = await Process.run('which', [executable]);
   return result.exitCode == 0;
+}
+
+/// This hook currently supports native Linux builds only.
+void validateNativeTarget(OS targetOS, Architecture targetArchitecture) {
+  if (OS.current != OS.linux ||
+      targetOS != OS.linux ||
+      targetArchitecture != Architecture.current) {
+    throw UnsupportedError(
+      'bluez_obex_native requires a native Linux build '
+      'for $targetArchitecture; host is ${OS.current}/${Architecture.current}. '
+      'Cross-compilation is not configured.',
+    );
+  }
+}
+
+Iterable<Uri> nativeDependencies(Directory nativeRoot) sync* {
+  yield nativeRoot.uri.resolve('CMakeLists.txt');
+  for (final name in [
+    'src',
+    'include',
+    'generated',
+    'third_party/sdbus-cpp/src',
+    'third_party/sdbus-cpp/include',
+  ]) {
+    final directory = Directory.fromUri(nativeRoot.uri.resolve('$name/'));
+    if (!directory.existsSync()) continue;
+    for (final entity in directory.listSync(
+      recursive: true,
+      followLinks: false,
+    )) {
+      if (entity is File &&
+          (entity.path.endsWith('/CMakeLists.txt') ||
+              [
+                '.cpp',
+                '.cc',
+                '.c',
+                '.hpp',
+                '.h',
+                '.cmake',
+                '.in',
+                '.inl',
+              ].any(entity.path.endsWith))) {
+        yield entity.uri;
+      }
+    }
+  }
+  yield nativeRoot.uri.resolve('third_party/sdbus-cpp/CMakeLists.txt');
 }

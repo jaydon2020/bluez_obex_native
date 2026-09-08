@@ -60,7 +60,8 @@ This template uses the following structure:
 
 `hook/build.dart` drives CMake and declares `libbluez_obex_native.so` as a
 bundled CodeAsset. Dart and Flutter consumers therefore build and package the
-native library automatically. Set `SKIP_NATIVE_BUILD` to skip the hook or
+native library automatically. The hook supports Linux builds for the host
+architecture and rejects cross-compilation. Set `SKIP_NATIVE_BUILD` to skip the hook or
 `BLUEZ_OBEX_LIB` to load a specific prebuilt library during development.
 
 ## Binding to native code
