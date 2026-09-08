@@ -83,5 +83,5 @@ private:
 
   std::mutex mutex_;
   std::map<std::string, std::unique_ptr<sdbus::IProxy>> property_proxies_;
-  std::map<std::string, std::set<std::string>> interfaces_by_path_;
+  std::map<std::string, InterfacesMap> interfaces_by_path_;
 };

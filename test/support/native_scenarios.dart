@@ -22,6 +22,26 @@ Future<void> main(List<String> args) async {
         events.any((e) => e.type == BlueZObexEventType.streamDone),
         'Missing terminal event',
       );
+    } else if (args.single == 'completion') {
+      final removed = client.events.firstWhere(
+        (e) => e.type == BlueZObexEventType.objectRemoved,
+      );
+      await client
+          .transfer('/org/bluez/obex/client/session0/transfer0')
+          .cancel();
+      await removed.timeout(const Duration(seconds: 5));
+      final transfers = events
+          .where((e) => e.payload is BlueZObexTransferProps)
+          .map((e) => e.payload as BlueZObexTransferProps)
+          .toList();
+      check(
+        transfers.any(
+          (p) =>
+              p.status == 'complete' &&
+              p.session == '/org/bluez/obex/client/session0',
+        ),
+        'Lost completion or unchanged cached properties',
+      );
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');
     }

@@ -69,7 +69,7 @@ void ObexObjectManager::on_interfaces_added(
     }
     {
       std::scoped_lock lock(mutex_);
-      interfaces_by_path_[path].insert(interface_name);
+      interfaces_by_path_[path][interface_name] = properties;
     }
     post_added(path, interface_name);
     should_subscribe = true;
@@ -118,12 +118,41 @@ void ObexObjectManager::subscribe_properties(const std::string &object_path) {
              object_path](const std::string &interface_name,
                           const std::map<std::string, sdbus::Variant> &changed,
                           const std::vector<std::string> &invalidated) {
-        // Transfer1 Status and Transferred updates arrive through this signal;
-        // reload the full interface to keep Dart snapshots complete.
-        (void)changed;
-        (void)invalidated;
-        if (is_obex_interface(interface_name)) {
-          post_properties(object_path, interface_name);
+        if (!is_obex_interface(interface_name)) return;
+        PropertiesMap snapshot;
+        {
+          std::scoped_lock lock(mutex_);
+          auto known = interfaces_by_path_.find(object_path);
+          if (known == interfaces_by_path_.end() ||
+              !known->second.contains(interface_name)) return;
+          auto &cached = known->second.at(interface_name);
+          for (const auto &[key, value] : changed) cached[key] = value;
+          for (const auto &key : invalidated) cached.erase(key);
+          snapshot = cached;
+        }
+        // Publish the signal's state before any round trip: the object may
+        // already be gone by the time a property request reaches the service.
+        post_properties(object_path, interface_name, &snapshot);
+        for (const auto &key : invalidated) {
+          try {
+            auto proxy = sdbus::createProxy(conn_, sdbus::ServiceName{kObexService},
+                                           sdbus::ObjectPath{object_path});
+            const auto value = proxy->getProperty(key).onInterface(interface_name);
+            {
+              std::scoped_lock lock(mutex_);
+              auto known = interfaces_by_path_.find(object_path);
+              if (known == interfaces_by_path_.end() ||
+                  !known->second.contains(interface_name)) return;
+              known->second.at(interface_name)[key] = value;
+              snapshot = known->second.at(interface_name);
+            }
+            post_properties(object_path, interface_name, &snapshot);
+          } catch (const sdbus::Error &error) {
+            if (error.getName() != "org.freedesktop.DBus.Error.UnknownObject" &&
+                error.getName() != "org.freedesktop.DBus.Error.UnknownInterface") {
+              post_error(object_path, error.getName(), error.getMessage());
+            }
+          }
         }
       });
 
