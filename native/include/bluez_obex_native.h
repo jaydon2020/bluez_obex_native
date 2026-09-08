@@ -59,7 +59,8 @@ FFI_PLUGIN_EXPORT int bluez_obex_transfer_resume(void *handle,
 
 // ── ObjectManager queries ──────────────────────────────────────────────────
 
-FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t **out);
+FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle,
+                                                     uint8_t **out);
 
 // ── Phonebook Access Profile ───────────────────────────────────────────────
 
@@ -97,19 +98,15 @@ FFI_PLUGIN_EXPORT int bluez_obex_phonebook_list_filter_fields(
 
 // ── Message Access Profile ─────────────────────────────────────────────────
 
-FFI_PLUGIN_EXPORT int
-bluez_obex_message_access_get_properties(void *handle,
-                                         const char *message_access_path,
-                                         uint8_t **out);
+FFI_PLUGIN_EXPORT int bluez_obex_message_access_get_properties(
+    void *handle, const char *message_access_path, uint8_t **out);
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_set_folder(
     void *handle, const char *message_access_path, const char *folder);
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_list_folders(
     void *handle, const char *message_access_path, const char **filter_keys,
     const char **filter_values, int32_t filter_count, uint8_t **out);
-FFI_PLUGIN_EXPORT int
-bluez_obex_message_access_list_filter_fields(void *handle,
-                                             const char *message_access_path,
-                                             uint8_t **out);
+FFI_PLUGIN_EXPORT int bluez_obex_message_access_list_filter_fields(
+    void *handle, const char *message_access_path, uint8_t **out);
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_list_messages(
     void *handle, const char *message_access_path, const char *folder,
     const char **filter_keys, const char **filter_values, int32_t filter_count,
