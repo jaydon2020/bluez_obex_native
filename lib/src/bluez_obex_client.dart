@@ -466,11 +466,8 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
   Future<BlueZObexManagedObjects> getManagedObjects() async {
     return _bridge.readGlaze<BlueZObexManagedObjects>(
       'bluez_obex_get_managed_objects',
-      (out, capacity) => nativeBindings.bluez_obex_get_managed_objects(
-        _bridge.handle,
-        out,
-        capacity,
-      ),
+      (out) =>
+          nativeBindings.bluez_obex_get_managed_objects(_bridge.handle, out),
     );
   }
 
@@ -487,12 +484,11 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlazeOnce<BlueZObexSessionProps>(
         'bluez_obex_client_create_session',
-        (out, capacity) => nativeBindings.bluez_obex_client_create_session(
+        (out) => nativeBindings.bluez_obex_client_create_session(
           _bridge.handle,
           destinationPtr.pointer,
           targetPtr.pointer,
           out,
-          capacity,
         ),
       );
     } finally {
@@ -523,11 +519,10 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlaze<BlueZObexSessionProps>(
         'bluez_obex_session_get_properties',
-        (out, capacity) => nativeBindings.bluez_obex_session_get_properties(
+        (out) => nativeBindings.bluez_obex_session_get_properties(
           _bridge.handle,
           path.pointer,
           out,
-          capacity,
         ),
       );
     } finally {
@@ -541,11 +536,10 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readUtf8(
         'bluez_obex_session_get_capabilities',
-        (out, capacity) => nativeBindings.bluez_obex_session_get_capabilities(
+        (out) => nativeBindings.bluez_obex_session_get_capabilities(
           _bridge.handle,
           path.pointer,
           out,
-          capacity,
         ),
       );
     } finally {
@@ -559,11 +553,10 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlaze<BlueZObexTransferProps>(
         'bluez_obex_transfer_get_properties',
-        (out, capacity) => nativeBindings.bluez_obex_transfer_get_properties(
+        (out) => nativeBindings.bluez_obex_transfer_get_properties(
           _bridge.handle,
           path.pointer,
           out,
-          capacity,
         ),
       );
     } finally {
@@ -621,11 +614,10 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlaze<BlueZObexPhonebookProps>(
         'bluez_obex_phonebook_get_properties',
-        (out, capacity) => nativeBindings.bluez_obex_phonebook_get_properties(
+        (out) => nativeBindings.bluez_obex_phonebook_get_properties(
           _bridge.handle,
           path.pointer,
           out,
-          capacity,
         ),
       );
     } finally {
@@ -671,7 +663,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlazeOnce<BlueZObexTransferResult>(
         'bluez_obex_phonebook_pull_all',
-        (out, capacity) => nativeBindings.bluez_obex_phonebook_pull_all(
+        (out) => nativeBindings.bluez_obex_phonebook_pull_all(
           _bridge.handle,
           path.pointer,
           target.pointer,
@@ -679,7 +671,6 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
           nativeFilters.values,
           nativeFilters.count,
           out,
-          capacity,
         ),
       );
     } finally {
@@ -703,7 +694,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlazeOnce<BlueZObexTransferResult>(
         'bluez_obex_phonebook_pull',
-        (out, capacity) => nativeBindings.bluez_obex_phonebook_pull(
+        (out) => nativeBindings.bluez_obex_phonebook_pull(
           _bridge.handle,
           path.pointer,
           vcardPtr.pointer,
@@ -712,7 +703,6 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
           nativeFilters.values,
           nativeFilters.count,
           out,
-          capacity,
         ),
       );
     } finally {
@@ -733,14 +723,13 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       final result = _bridge.readGlaze<BlueZObexPhonebookEntries>(
         'bluez_obex_phonebook_list',
-        (out, capacity) => nativeBindings.bluez_obex_phonebook_list(
+        (out) => nativeBindings.bluez_obex_phonebook_list(
           _bridge.handle,
           path.pointer,
           nativeFilters.keys,
           nativeFilters.values,
           nativeFilters.count,
           out,
-          capacity,
         ),
       );
       return result.entries;
@@ -764,7 +753,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       final result = _bridge.readGlaze<BlueZObexPhonebookEntries>(
         'bluez_obex_phonebook_search',
-        (out, capacity) => nativeBindings.bluez_obex_phonebook_search(
+        (out) => nativeBindings.bluez_obex_phonebook_search(
           _bridge.handle,
           path.pointer,
           fieldPtr.pointer,
@@ -773,7 +762,6 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
           nativeFilters.values,
           nativeFilters.count,
           out,
-          capacity,
         ),
       );
       return result.entries;
@@ -822,13 +810,11 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       final result = _bridge.readGlaze<BlueZObexFilterFields>(
         'bluez_obex_phonebook_list_filter_fields',
-        (out, capacity) =>
-            nativeBindings.bluez_obex_phonebook_list_filter_fields(
-              _bridge.handle,
-              path.pointer,
-              out,
-              capacity,
-            ),
+        (out) => nativeBindings.bluez_obex_phonebook_list_filter_fields(
+          _bridge.handle,
+          path.pointer,
+          out,
+        ),
       );
       return result.fields;
     } finally {
@@ -866,13 +852,11 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlaze<BlueZObexMessageAccessProps>(
         'bluez_obex_message_access_get_properties',
-        (out, capacity) =>
-            nativeBindings.bluez_obex_message_access_get_properties(
-              _bridge.handle,
-              path.pointer,
-              out,
-              capacity,
-            ),
+        (out) => nativeBindings.bluez_obex_message_access_get_properties(
+          _bridge.handle,
+          path.pointer,
+          out,
+        ),
       );
     } finally {
       path.dispose();
@@ -889,16 +873,14 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       final result = _bridge.readGlaze<BlueZObexMessageFolders>(
         'bluez_obex_message_access_list_folders',
-        (out, capacity) =>
-            nativeBindings.bluez_obex_message_access_list_folders(
-              _bridge.handle,
-              path.pointer,
-              nativeFilters.keys,
-              nativeFilters.values,
-              nativeFilters.count,
-              out,
-              capacity,
-            ),
+        (out) => nativeBindings.bluez_obex_message_access_list_folders(
+          _bridge.handle,
+          path.pointer,
+          nativeFilters.keys,
+          nativeFilters.values,
+          nativeFilters.count,
+          out,
+        ),
       );
       return result.folders;
     } finally {
@@ -915,13 +897,11 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       final result = _bridge.readGlaze<BlueZObexFilterFields>(
         'bluez_obex_message_access_list_filter_fields',
-        (out, capacity) =>
-            nativeBindings.bluez_obex_message_access_list_filter_fields(
-              _bridge.handle,
-              path.pointer,
-              out,
-              capacity,
-            ),
+        (out) => nativeBindings.bluez_obex_message_access_list_filter_fields(
+          _bridge.handle,
+          path.pointer,
+          out,
+        ),
       );
       return result.fields;
     } finally {
@@ -941,17 +921,15 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       final result = _bridge.readGlazeOnce<BlueZObexMessages>(
         'bluez_obex_message_access_list_messages',
-        (out, capacity) =>
-            nativeBindings.bluez_obex_message_access_list_messages(
-              _bridge.handle,
-              path.pointer,
-              folderPtr.pointer,
-              nativeFilters.keys,
-              nativeFilters.values,
-              nativeFilters.count,
-              out,
-              capacity,
-            ),
+        (out) => nativeBindings.bluez_obex_message_access_list_messages(
+          _bridge.handle,
+          path.pointer,
+          folderPtr.pointer,
+          nativeFilters.keys,
+          nativeFilters.values,
+          nativeFilters.count,
+          out,
+        ),
         capacity: 1024 * 1024,
       );
       return result.messages;
@@ -992,18 +970,16 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlazeOnce<BlueZObexTransferResult>(
         'bluez_obex_message_access_push_message',
-        (out, capacity) =>
-            nativeBindings.bluez_obex_message_access_push_message(
-              _bridge.handle,
-              path.pointer,
-              sourceFilePtr.pointer,
-              folderPtr.pointer,
-              nativeArgs.keys,
-              nativeArgs.values,
-              nativeArgs.count,
-              out,
-              capacity,
-            ),
+        (out) => nativeBindings.bluez_obex_message_access_push_message(
+          _bridge.handle,
+          path.pointer,
+          sourceFilePtr.pointer,
+          folderPtr.pointer,
+          nativeArgs.keys,
+          nativeArgs.values,
+          nativeArgs.count,
+          out,
+        ),
       );
     } finally {
       nativeArgs.dispose();
@@ -1019,11 +995,10 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlaze<BlueZObexMessageProps>(
         'bluez_obex_message_get_properties',
-        (out, capacity) => nativeBindings.bluez_obex_message_get_properties(
+        (out) => nativeBindings.bluez_obex_message_get_properties(
           _bridge.handle,
           path.pointer,
           out,
-          capacity,
         ),
       );
     } finally {
@@ -1042,13 +1017,12 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     try {
       return _bridge.readGlazeOnce<BlueZObexTransferResult>(
         'bluez_obex_message_get',
-        (out, capacity) => nativeBindings.bluez_obex_message_get(
+        (out) => nativeBindings.bluez_obex_message_get(
           _bridge.handle,
           path.pointer,
           target.pointer,
           attachment ? 1 : 0,
           out,
-          capacity,
         ),
       );
     } finally {

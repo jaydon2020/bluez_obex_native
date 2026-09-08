@@ -66,7 +66,13 @@ Future<void> main(List<String> args) async {
         (_) => ticks++,
       );
       try {
-        await client.session('/org/bluez/obex/client/session0').capabilities();
+        final capabilities = await client
+            .session('/org/bluez/obex/client/session0')
+            .capabilities();
+        check(
+          capabilities == 'capabilities:1',
+          'Remote operation executed more than once',
+        );
         check(ticks >= 5, 'Native call blocked Dart timers');
       } finally {
         timer.cancel();

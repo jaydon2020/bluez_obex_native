@@ -32,10 +32,12 @@ class Client(dbus.service.Object):
   return dbus.ObjectPath('/org/bluez/obex/client/session0')
 client = Client(bus, '/org/bluez/obex')
 class Session(dbus.service.Object):
+ calls = 0
  @dbus.service.method('org.bluez.obex.Session1', out_signature='s')
  def GetCapabilities(self):
+  self.calls += 1
   time.sleep(0.25)
-  return 'capabilities'
+  return 'capabilities:' + str(self.calls)
 session = Session(bus, '/org/bluez/obex/client/session0')
 root = Root(bus, '/')
 transfer = Transfer(bus,path)

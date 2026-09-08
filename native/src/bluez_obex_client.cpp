@@ -7,6 +7,8 @@
 #include <atomic>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
+#include <new>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -81,34 +83,24 @@ std::shared_ptr<BluezObexClientContext> client_for(void *handle) {
              ? nullptr : it->second;
 }
 
-int copy_payload(const std::vector<uint8_t> &payload, uint8_t *out,
-                 int32_t capacity) {
-  if (capacity < 0 || payload.size() > INT32_MAX) {
-    return -1;
-  }
-  if (out == nullptr || capacity == 0) {
-    return static_cast<int>(payload.size());
-  }
-  if (capacity < static_cast<int32_t>(payload.size())) {
-    return -2;
-  }
-  std::memcpy(out, payload.data(), payload.size());
-  return static_cast<int>(payload.size());
+int copy_data(const void *data, size_t size, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
+  if (size > INT32_MAX) return -1;
+  if (size == 0) return 0;
+  auto *allocated = static_cast<uint8_t *>(std::malloc(size));
+  if (!allocated) throw std::bad_alloc{};
+  std::memcpy(allocated, data, size);
+  *out = allocated;
+  return static_cast<int>(size);
 }
 
-int copy_string_payload(const std::string &payload, uint8_t *out,
-                        int32_t capacity) {
-  if (capacity < 0 || payload.size() > INT32_MAX) {
-    return -1;
-  }
-  if (out == nullptr || capacity == 0) {
-    return static_cast<int>(payload.size());
-  }
-  if (capacity < static_cast<int32_t>(payload.size())) {
-    return -2;
-  }
-  std::memcpy(out, payload.data(), payload.size());
-  return static_cast<int>(payload.size());
+int copy_payload(const std::vector<uint8_t> &payload, uint8_t **out) {
+  return copy_data(payload.data(), payload.size(), out);
+}
+
+int copy_string_payload(const std::string &payload, uint8_t **out) {
+  return copy_data(payload.data(), payload.size(), out);
 }
 
 std::string cstr_or_empty(const char *value) {
@@ -136,9 +128,9 @@ make_variant_map(const char **keys, const char **values, int32_t count) {
 }
 
 template <typename Fn>
-int call_bytes(const char *label, Fn &&fn, uint8_t *out, int32_t capacity) {
+int call_bytes(const char *label, Fn &&fn, uint8_t **out) {
   try {
-    return copy_payload(fn(), out, capacity);
+    return copy_payload(fn(), out);
   } catch (const sdbus::Error &e) {
     fprintf(stderr, "%s: %s\n", label, e.what());
     return -3;
@@ -163,6 +155,8 @@ template <typename Fn> int call_status(const char *label, Fn &&fn) {
 } // namespace
 
 extern "C" {
+
+FFI_PLUGIN_EXPORT void bluez_obex_free(void *buffer) { std::free(buffer); }
 
 FFI_PLUGIN_EXPORT void bluez_obex_init(void *dart_api_dl_data) {
   if (dart_api_dl_data == nullptr) {
@@ -234,8 +228,9 @@ FFI_PLUGIN_EXPORT void bluez_obex_client_destroy(void *handle) {
 FFI_PLUGIN_EXPORT int bluez_obex_client_create_session(void *handle,
                                                        const char *destination,
                                                        const char *target,
-                                                       uint8_t *out,
-                                                       int32_t capacity) {
+                                                       uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || destination == nullptr) {
     return -1;
   }
@@ -254,7 +249,7 @@ FFI_PLUGIN_EXPORT int bluez_obex_client_create_session(void *handle,
         return ObexSessionManager{*ctx->conn}.encoded_create_session(
             destination, args);
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int
@@ -273,7 +268,9 @@ bluez_obex_client_remove_session(void *handle, const char *session_path) {
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_session_get_properties(void *handle, const char *session_path,
-                                  uint8_t *out, int32_t capacity) {
+                                  uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || session_path == nullptr) {
     return -1;
   }
@@ -286,12 +283,14 @@ bluez_obex_session_get_properties(void *handle, const char *session_path,
       [=]() {
         return ObexSessionProxy{*ctx->conn, session_path}.encoded_properties();
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_session_get_capabilities(void *handle, const char *session_path,
-                                    uint8_t *out, int32_t capacity) {
+                                    uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || session_path == nullptr) {
     return -1;
   }
@@ -301,8 +300,7 @@ bluez_obex_session_get_capabilities(void *handle, const char *session_path,
   }
   try {
     return copy_string_payload(
-        ObexSessionProxy{*ctx->conn, session_path}.get_capabilities(), out,
-        capacity);
+        ObexSessionProxy{*ctx->conn, session_path}.get_capabilities(), out);
   } catch (const sdbus::Error &e) {
     fprintf(stderr, "bluez_obex_session_get_capabilities: %s\n", e.what());
     return -3;
@@ -314,7 +312,9 @@ bluez_obex_session_get_capabilities(void *handle, const char *session_path,
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_transfer_get_properties(void *handle, const char *transfer_path,
-                                   uint8_t *out, int32_t capacity) {
+                                   uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || transfer_path == nullptr) {
     return -1;
   }
@@ -328,7 +328,7 @@ bluez_obex_transfer_get_properties(void *handle, const char *transfer_path,
         return ObexTransferProxy{*ctx->conn, transfer_path}
             .encoded_properties();
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_transfer_cancel(void *handle,
@@ -373,8 +373,9 @@ FFI_PLUGIN_EXPORT int bluez_obex_transfer_resume(void *handle,
   });
 }
 
-FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t *out,
-                                                     int32_t capacity) {
+FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr) {
     return -1;
   }
@@ -383,7 +384,7 @@ FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t *out,
     return -1;
   }
   try {
-    return copy_payload(ctx->client->get_managed_objects(), out, capacity);
+    return copy_payload(ctx->client->get_managed_objects(), out);
   } catch (const sdbus::Error &e) {
     fprintf(stderr, "bluez_obex_get_managed_objects: %s\n", e.what());
     return -3;
@@ -392,16 +393,19 @@ FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t *out,
     return -3;
   }
 }
-FFI_PLUGIN_EXPORT int bluez_obex_get_devices(uint8_t *out, int32_t capacity) {
+FFI_PLUGIN_EXPORT int bluez_obex_get_devices(uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   return call_bytes(
       "bluez_obex_get_devices",
-      []() { return glz::encode(BluezDeviceRegistry::get_devices()); }, out,
-      capacity);
+      []() { return glz::encode(BluezDeviceRegistry::get_devices()); }, out);
 }
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_phonebook_get_properties(void *handle, const char *phonebook_path,
-                                    uint8_t *out, int32_t capacity) {
+                                    uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || phonebook_path == nullptr) {
     return -1;
   }
@@ -415,7 +419,7 @@ bluez_obex_phonebook_get_properties(void *handle, const char *phonebook_path,
         return ObexPhonebookProxy{*ctx->conn, phonebook_path}
             .encoded_properties();
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_phonebook_select(void *handle,
@@ -439,7 +443,9 @@ FFI_PLUGIN_EXPORT int
 bluez_obex_phonebook_pull_all(void *handle, const char *phonebook_path,
                               const char *target_file, const char **filter_keys,
                               const char **filter_values, int32_t filter_count,
-                              uint8_t *out, int32_t capacity) {
+                              uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || phonebook_path == nullptr ||
       target_file == nullptr) {
     return -1;
@@ -455,15 +461,16 @@ bluez_obex_phonebook_pull_all(void *handle, const char *phonebook_path,
             target_file,
             make_variant_map(filter_keys, filter_values, filter_count));
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_phonebook_pull(void *handle, const char *phonebook_path,
                           const char *vcard, const char *target_file,
                           const char **filter_keys, const char **filter_values,
-                          int32_t filter_count, uint8_t *out,
-                          int32_t capacity) {
+                          int32_t filter_count, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || phonebook_path == nullptr || vcard == nullptr ||
       target_file == nullptr) {
     return -1;
@@ -479,14 +486,15 @@ bluez_obex_phonebook_pull(void *handle, const char *phonebook_path,
             vcard, target_file,
             make_variant_map(filter_keys, filter_values, filter_count));
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_phonebook_list(void *handle, const char *phonebook_path,
                           const char **filter_keys, const char **filter_values,
-                          int32_t filter_count, uint8_t *out,
-                          int32_t capacity) {
+                          int32_t filter_count, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || phonebook_path == nullptr) {
     return -1;
   }
@@ -500,13 +508,15 @@ bluez_obex_phonebook_list(void *handle, const char *phonebook_path,
         return ObexPhonebookProxy{*ctx->conn, phonebook_path}.encoded_list(
             make_variant_map(filter_keys, filter_values, filter_count));
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_phonebook_search(
     void *handle, const char *phonebook_path, const char *field,
     const char *value, const char **filter_keys, const char **filter_values,
-    int32_t filter_count, uint8_t *out, int32_t capacity) {
+    int32_t filter_count, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || phonebook_path == nullptr || field == nullptr ||
       value == nullptr) {
     return -1;
@@ -522,7 +532,7 @@ FFI_PLUGIN_EXPORT int bluez_obex_phonebook_search(
             field, value,
             make_variant_map(filter_keys, filter_values, filter_count));
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int
@@ -560,7 +570,9 @@ bluez_obex_phonebook_update_version(void *handle, const char *phonebook_path) {
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_phonebook_list_filter_fields(
-    void *handle, const char *phonebook_path, uint8_t *out, int32_t capacity) {
+    void *handle, const char *phonebook_path, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || phonebook_path == nullptr) {
     return -1;
   }
@@ -574,7 +586,7 @@ FFI_PLUGIN_EXPORT int bluez_obex_phonebook_list_filter_fields(
         return ObexPhonebookProxy{*ctx->conn, phonebook_path}
             .encoded_list_filter_fields();
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_set_folder(
@@ -595,7 +607,9 @@ FFI_PLUGIN_EXPORT int bluez_obex_message_access_set_folder(
 FFI_PLUGIN_EXPORT int
 bluez_obex_message_access_get_properties(void *handle,
                                          const char *message_access_path,
-                                         uint8_t *out, int32_t capacity) {
+                                         uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || message_access_path == nullptr) {
     return -1;
   }
@@ -609,13 +623,14 @@ bluez_obex_message_access_get_properties(void *handle,
         return ObexMessageAccessProxy{*ctx->conn, message_access_path}
             .encoded_properties();
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_list_folders(
     void *handle, const char *message_access_path, const char **filter_keys,
-    const char **filter_values, int32_t filter_count, uint8_t *out,
-    int32_t capacity) {
+    const char **filter_values, int32_t filter_count, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || message_access_path == nullptr) {
     return -1;
   }
@@ -630,13 +645,15 @@ FFI_PLUGIN_EXPORT int bluez_obex_message_access_list_folders(
             .encoded_list_folders(
                 make_variant_map(filter_keys, filter_values, filter_count));
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_message_access_list_filter_fields(void *handle,
                                              const char *message_access_path,
-                                             uint8_t *out, int32_t capacity) {
+                                             uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || message_access_path == nullptr) {
     return -1;
   }
@@ -650,13 +667,15 @@ bluez_obex_message_access_list_filter_fields(void *handle,
         return ObexMessageAccessProxy{*ctx->conn, message_access_path}
             .encoded_list_filter_fields();
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_list_messages(
     void *handle, const char *message_access_path, const char *folder,
     const char **filter_keys, const char **filter_values, int32_t filter_count,
-    uint8_t *out, int32_t capacity) {
+    uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || message_access_path == nullptr ||
       folder == nullptr) {
     return -1;
@@ -673,7 +692,7 @@ FFI_PLUGIN_EXPORT int bluez_obex_message_access_list_messages(
                 folder,
                 make_variant_map(filter_keys, filter_values, filter_count));
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int
@@ -694,7 +713,9 @@ bluez_obex_message_access_update_inbox(void *handle,
 FFI_PLUGIN_EXPORT int bluez_obex_message_access_push_message(
     void *handle, const char *message_access_path, const char *source_file,
     const char *folder, const char **arg_keys, const char **arg_values,
-    int32_t arg_count, uint8_t *out, int32_t capacity) {
+    int32_t arg_count, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || message_access_path == nullptr ||
       source_file == nullptr || folder == nullptr) {
     return -1;
@@ -712,12 +733,14 @@ FFI_PLUGIN_EXPORT int bluez_obex_message_access_push_message(
                     source_file, folder,
                     make_variant_map(arg_keys, arg_values, arg_count)));
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int
 bluez_obex_message_get_properties(void *handle, const char *message_path,
-                                  uint8_t *out, int32_t capacity) {
+                                  uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || message_path == nullptr) {
     return -1;
   }
@@ -730,14 +753,15 @@ bluez_obex_message_get_properties(void *handle, const char *message_path,
       [=]() {
         return ObexMessageProxy{*ctx->conn, message_path}.encoded_properties();
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int bluez_obex_message_get(void *handle,
                                              const char *message_path,
                                              const char *target_file,
-                                             int attachment, uint8_t *out,
-                                             int32_t capacity) {
+                                             int attachment, uint8_t **out) {
+  if (out == nullptr) return -1;
+  *out = nullptr;
   if (handle == nullptr || message_path == nullptr || target_file == nullptr) {
     return -1;
   }
@@ -751,7 +775,7 @@ FFI_PLUGIN_EXPORT int bluez_obex_message_get(void *handle,
         return ObexMessageProxy{*ctx->conn, message_path}.encoded_get(
             target_file, attachment != 0);
       },
-      out, capacity);
+      out);
 }
 
 FFI_PLUGIN_EXPORT int

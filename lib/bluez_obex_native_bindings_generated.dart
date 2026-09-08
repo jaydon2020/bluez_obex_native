@@ -26,17 +26,33 @@ class BluezObexNativeBindings {
     ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup,
   ) : _lookup = lookup;
 
+  /// Byte-returning functions allocate *out and return its length (or a negative
+  /// status on failure). Call bluez_obex_free on successful results, including
+  /// empty results. Each operation executes exactly once; there is no sizing call.
+  void bluez_obex_free(ffi.Pointer<ffi.Void> buffer) {
+    return _bluez_obex_free(buffer);
+  }
+
+  late final _bluez_obex_freePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'bluez_obex_free',
+      );
+  late final _bluez_obex_free = _bluez_obex_freePtr
+      .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
   /// ── Client lifecycle ────────────────────────────────────────────────────────
-  int bluez_obex_get_devices(ffi.Pointer<ffi.Uint8> out, int capacity) {
-    return _bluez_obex_get_devices(out, capacity);
+  int bluez_obex_get_devices(ffi.Pointer<ffi.Pointer<ffi.Uint8>> out) {
+    return _bluez_obex_get_devices(out);
   }
 
   late final _bluez_obex_get_devicesPtr =
       _lookup<
-        ffi.NativeFunction<ffi.Int Function(ffi.Pointer<ffi.Uint8>, ffi.Int32)>
+        ffi.NativeFunction<
+          ffi.Int Function(ffi.Pointer<ffi.Pointer<ffi.Uint8>>)
+        >
       >('bluez_obex_get_devices');
   late final _bluez_obex_get_devices = _bluez_obex_get_devicesPtr
-      .asFunction<int Function(ffi.Pointer<ffi.Uint8>, int)>();
+      .asFunction<int Function(ffi.Pointer<ffi.Pointer<ffi.Uint8>>)>();
 
   void bluez_obex_init(ffi.Pointer<ffi.Void> dart_api_dl_data) {
     return _bluez_obex_init(dart_api_dl_data);
@@ -76,16 +92,9 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> destination,
     ffi.Pointer<ffi.Char> target,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
-    return _bluez_obex_client_create_session(
-      handle,
-      destination,
-      target,
-      out,
-      capacity,
-    );
+    return _bluez_obex_client_create_session(handle, destination, target, out);
   }
 
   late final _bluez_obex_client_create_sessionPtr =
@@ -95,8 +104,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_client_create_session');
@@ -107,8 +115,7 @@ class BluezObexNativeBindings {
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -134,15 +141,9 @@ class BluezObexNativeBindings {
   int bluez_obex_session_get_properties(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> session_path,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
-    return _bluez_obex_session_get_properties(
-      handle,
-      session_path,
-      out,
-      capacity,
-    );
+    return _bluez_obex_session_get_properties(handle, session_path, out);
   }
 
   late final _bluez_obex_session_get_propertiesPtr =
@@ -151,8 +152,7 @@ class BluezObexNativeBindings {
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_session_get_properties');
@@ -162,23 +162,16 @@ class BluezObexNativeBindings {
             int Function(
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
   int bluez_obex_session_get_capabilities(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> session_path,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
-    return _bluez_obex_session_get_capabilities(
-      handle,
-      session_path,
-      out,
-      capacity,
-    );
+    return _bluez_obex_session_get_capabilities(handle, session_path, out);
   }
 
   late final _bluez_obex_session_get_capabilitiesPtr =
@@ -187,8 +180,7 @@ class BluezObexNativeBindings {
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_session_get_capabilities');
@@ -198,8 +190,7 @@ class BluezObexNativeBindings {
             int Function(
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -207,15 +198,9 @@ class BluezObexNativeBindings {
   int bluez_obex_transfer_get_properties(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> transfer_path,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
-    return _bluez_obex_transfer_get_properties(
-      handle,
-      transfer_path,
-      out,
-      capacity,
-    );
+    return _bluez_obex_transfer_get_properties(handle, transfer_path, out);
   }
 
   late final _bluez_obex_transfer_get_propertiesPtr =
@@ -224,8 +209,7 @@ class BluezObexNativeBindings {
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_transfer_get_properties');
@@ -235,8 +219,7 @@ class BluezObexNativeBindings {
             int Function(
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -291,10 +274,9 @@ class BluezObexNativeBindings {
   /// ── ObjectManager queries ──────────────────────────────────────────────────
   int bluez_obex_get_managed_objects(
     ffi.Pointer<ffi.Void> handle,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
-    return _bluez_obex_get_managed_objects(handle, out, capacity);
+    return _bluez_obex_get_managed_objects(handle, out);
   }
 
   late final _bluez_obex_get_managed_objectsPtr =
@@ -302,30 +284,26 @@ class BluezObexNativeBindings {
         ffi.NativeFunction<
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_get_managed_objects');
   late final _bluez_obex_get_managed_objects =
       _bluez_obex_get_managed_objectsPtr
           .asFunction<
-            int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Uint8>, int)
+            int Function(
+              ffi.Pointer<ffi.Void>,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
+            )
           >();
 
   /// ── Phonebook Access Profile ───────────────────────────────────────────────
   int bluez_obex_phonebook_get_properties(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> phonebook_path,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
-    return _bluez_obex_phonebook_get_properties(
-      handle,
-      phonebook_path,
-      out,
-      capacity,
-    );
+    return _bluez_obex_phonebook_get_properties(handle, phonebook_path, out);
   }
 
   late final _bluez_obex_phonebook_get_propertiesPtr =
@@ -334,8 +312,7 @@ class BluezObexNativeBindings {
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_phonebook_get_properties');
@@ -345,8 +322,7 @@ class BluezObexNativeBindings {
             int Function(
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -392,8 +368,7 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
     int filter_count,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_phonebook_pull_all(
       handle,
@@ -403,7 +378,6 @@ class BluezObexNativeBindings {
       filter_values,
       filter_count,
       out,
-      capacity,
     );
   }
 
@@ -417,8 +391,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Int32,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_phonebook_pull_all');
@@ -431,8 +404,7 @@ class BluezObexNativeBindings {
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           int,
-          ffi.Pointer<ffi.Uint8>,
-          int,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
         )
       >();
 
@@ -444,8 +416,7 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
     int filter_count,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_phonebook_pull(
       handle,
@@ -456,7 +427,6 @@ class BluezObexNativeBindings {
       filter_values,
       filter_count,
       out,
-      capacity,
     );
   }
 
@@ -471,8 +441,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Int32,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_phonebook_pull');
@@ -486,8 +455,7 @@ class BluezObexNativeBindings {
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           int,
-          ffi.Pointer<ffi.Uint8>,
-          int,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
         )
       >();
 
@@ -497,8 +465,7 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
     int filter_count,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_phonebook_list(
       handle,
@@ -507,7 +474,6 @@ class BluezObexNativeBindings {
       filter_values,
       filter_count,
       out,
-      capacity,
     );
   }
 
@@ -520,8 +486,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Int32,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_phonebook_list');
@@ -533,8 +498,7 @@ class BluezObexNativeBindings {
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           int,
-          ffi.Pointer<ffi.Uint8>,
-          int,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
         )
       >();
 
@@ -546,8 +510,7 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
     int filter_count,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_phonebook_search(
       handle,
@@ -558,7 +521,6 @@ class BluezObexNativeBindings {
       filter_values,
       filter_count,
       out,
-      capacity,
     );
   }
 
@@ -573,8 +535,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Int32,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_phonebook_search');
@@ -588,8 +549,7 @@ class BluezObexNativeBindings {
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           int,
-          ffi.Pointer<ffi.Uint8>,
-          int,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
         )
       >();
 
@@ -631,14 +591,12 @@ class BluezObexNativeBindings {
   int bluez_obex_phonebook_list_filter_fields(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> phonebook_path,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_phonebook_list_filter_fields(
       handle,
       phonebook_path,
       out,
-      capacity,
     );
   }
 
@@ -648,8 +606,7 @@ class BluezObexNativeBindings {
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_phonebook_list_filter_fields');
@@ -659,8 +616,7 @@ class BluezObexNativeBindings {
             int Function(
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -668,14 +624,12 @@ class BluezObexNativeBindings {
   int bluez_obex_message_access_get_properties(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> message_access_path,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_message_access_get_properties(
       handle,
       message_access_path,
       out,
-      capacity,
     );
   }
 
@@ -685,8 +639,7 @@ class BluezObexNativeBindings {
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_message_access_get_properties');
@@ -696,8 +649,7 @@ class BluezObexNativeBindings {
             int Function(
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -739,8 +691,7 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
     int filter_count,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_message_access_list_folders(
       handle,
@@ -749,7 +700,6 @@ class BluezObexNativeBindings {
       filter_values,
       filter_count,
       out,
-      capacity,
     );
   }
 
@@ -762,8 +712,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Int32,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_message_access_list_folders');
@@ -776,22 +725,19 @@ class BluezObexNativeBindings {
               ffi.Pointer<ffi.Pointer<ffi.Char>>,
               ffi.Pointer<ffi.Pointer<ffi.Char>>,
               int,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
   int bluez_obex_message_access_list_filter_fields(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> message_access_path,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_message_access_list_filter_fields(
       handle,
       message_access_path,
       out,
-      capacity,
     );
   }
 
@@ -801,8 +747,7 @@ class BluezObexNativeBindings {
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_message_access_list_filter_fields');
@@ -812,8 +757,7 @@ class BluezObexNativeBindings {
             int Function(
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -824,8 +768,7 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_keys,
     ffi.Pointer<ffi.Pointer<ffi.Char>> filter_values,
     int filter_count,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_message_access_list_messages(
       handle,
@@ -835,7 +778,6 @@ class BluezObexNativeBindings {
       filter_values,
       filter_count,
       out,
-      capacity,
     );
   }
 
@@ -849,8 +791,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Int32,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_message_access_list_messages');
@@ -864,8 +805,7 @@ class BluezObexNativeBindings {
               ffi.Pointer<ffi.Pointer<ffi.Char>>,
               ffi.Pointer<ffi.Pointer<ffi.Char>>,
               int,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -896,8 +836,7 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> arg_keys,
     ffi.Pointer<ffi.Pointer<ffi.Char>> arg_values,
     int arg_count,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_message_access_push_message(
       handle,
@@ -908,7 +847,6 @@ class BluezObexNativeBindings {
       arg_values,
       arg_count,
       out,
-      capacity,
     );
   }
 
@@ -923,8 +861,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Int32,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_message_access_push_message');
@@ -939,23 +876,16 @@ class BluezObexNativeBindings {
               ffi.Pointer<ffi.Pointer<ffi.Char>>,
               ffi.Pointer<ffi.Pointer<ffi.Char>>,
               int,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
   int bluez_obex_message_get_properties(
     ffi.Pointer<ffi.Void> handle,
     ffi.Pointer<ffi.Char> message_path,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
-    return _bluez_obex_message_get_properties(
-      handle,
-      message_path,
-      out,
-      capacity,
-    );
+    return _bluez_obex_message_get_properties(handle, message_path, out);
   }
 
   late final _bluez_obex_message_get_propertiesPtr =
@@ -964,8 +894,7 @@ class BluezObexNativeBindings {
           ffi.Int Function(
             ffi.Pointer<ffi.Void>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_message_get_properties');
@@ -975,8 +904,7 @@ class BluezObexNativeBindings {
             int Function(
               ffi.Pointer<ffi.Void>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Uint8>,
-              int,
+              ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             )
           >();
 
@@ -985,8 +913,7 @@ class BluezObexNativeBindings {
     ffi.Pointer<ffi.Char> message_path,
     ffi.Pointer<ffi.Char> target_file,
     int attachment,
-    ffi.Pointer<ffi.Uint8> out,
-    int capacity,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out,
   ) {
     return _bluez_obex_message_get(
       handle,
@@ -994,7 +921,6 @@ class BluezObexNativeBindings {
       target_file,
       attachment,
       out,
-      capacity,
     );
   }
 
@@ -1006,8 +932,7 @@ class BluezObexNativeBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Int,
-            ffi.Pointer<ffi.Uint8>,
-            ffi.Int32,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           )
         >
       >('bluez_obex_message_get');
@@ -1018,8 +943,7 @@ class BluezObexNativeBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           int,
-          ffi.Pointer<ffi.Uint8>,
-          int,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
         )
       >();
 
