@@ -29,27 +29,6 @@ set(BLUEZ_OBEX_NATIVE_SOURCES
   src/obex_transfer_proxy.cpp
 )
 
-add_library(bluez_obex_native_core STATIC
-  ${BLUEZ_OBEX_NATIVE_SOURCES}
-)
-
-target_include_directories(bluez_obex_native_core
-  PUBLIC include
-)
-
-target_compile_definitions(bluez_obex_native_core
-  PUBLIC DART_SHARED_LIB
-)
-
-target_link_libraries(bluez_obex_native_core
-  PUBLIC sdbus-c++ pthread
-)
-
-set_target_properties(bluez_obex_native_core PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-  LINKER_LANGUAGE CXX
-)
-
 add_library(bluez_obex_native SHARED
   ${BLUEZ_OBEX_NATIVE_SOURCES}
 )
@@ -86,5 +65,18 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING)
+  add_library(bluez_obex_native_core STATIC
+    ${BLUEZ_OBEX_NATIVE_SOURCES}
+  )
+
+  target_include_directories(bluez_obex_native_core PUBLIC include)
+  target_compile_definitions(bluez_obex_native_core PUBLIC DART_SHARED_LIB)
+  target_link_libraries(bluez_obex_native_core PUBLIC sdbus-c++ pthread)
+
+  set_target_properties(bluez_obex_native_core PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    LINKER_LANGUAGE CXX
+  )
+
   add_subdirectory(test)
 endif()
