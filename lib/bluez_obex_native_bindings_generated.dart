@@ -40,6 +40,30 @@ class BluezObexNativeBindings {
   late final _bluez_obex_free = _bluez_obex_freePtr
       .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
+  /// Details for the latest -3 result on the calling thread. Copy these borrowed
+  /// strings immediately, before another native operation. Do not free them.
+  ffi.Pointer<ffi.Char> bluez_obex_last_error_name() {
+    return _bluez_obex_last_error_name();
+  }
+
+  late final _bluez_obex_last_error_namePtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function()>>(
+        'bluez_obex_last_error_name',
+      );
+  late final _bluez_obex_last_error_name = _bluez_obex_last_error_namePtr
+      .asFunction<ffi.Pointer<ffi.Char> Function()>();
+
+  ffi.Pointer<ffi.Char> bluez_obex_last_error_message() {
+    return _bluez_obex_last_error_message();
+  }
+
+  late final _bluez_obex_last_error_messagePtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function()>>(
+        'bluez_obex_last_error_message',
+      );
+  late final _bluez_obex_last_error_message = _bluez_obex_last_error_messagePtr
+      .asFunction<ffi.Pointer<ffi.Char> Function()>();
+
   /// ── Client lifecycle ────────────────────────────────────────────────────────
   int bluez_obex_get_devices(ffi.Pointer<ffi.Pointer<ffi.Uint8>> out) {
     return _bluez_obex_get_devices(out);

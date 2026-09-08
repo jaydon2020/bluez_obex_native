@@ -17,6 +17,11 @@ extern "C" {
 // empty results. Each operation executes exactly once; there is no sizing call.
 FFI_PLUGIN_EXPORT void bluez_obex_free(void *buffer);
 
+// Details for the latest -3 result on the calling thread. Copy these borrowed
+// strings immediately, before another native operation. Do not free them.
+FFI_PLUGIN_EXPORT const char *bluez_obex_last_error_name(void);
+FFI_PLUGIN_EXPORT const char *bluez_obex_last_error_message(void);
+
 // ── Client lifecycle ────────────────────────────────────────────────────────
 
 FFI_PLUGIN_EXPORT int bluez_obex_get_devices(uint8_t **out);

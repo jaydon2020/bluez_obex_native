@@ -432,10 +432,11 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
       receivePort.sendPort.nativePort,
     );
     if (handle == ffi.nullptr) {
+      final error = nativeException('bluez_obex_client_create', -3);
       receivePort.close();
       await receiveSubscription.cancel();
       await eventsController.close();
-      throw const BlueZObexNativeException('bluez_obex_client_create', -1);
+      throw error;
     }
 
     return _LocalNativeBlueZObexBackend._(

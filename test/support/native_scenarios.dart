@@ -101,8 +101,15 @@ Future<void> main(List<String> args) async {
             .messageAccess('/org/bluez/obex/client/large')
             .listMessages('missing/inbox');
         throw StateError('Returned messages despite failed navigation');
-      } on BlueZObexNativeException {
-        /* expected */
+      } on BlueZObexNativeException catch (error) {
+        check(
+          error.name == 'org.bluez.obex.Error.Failed',
+          'Missing D-Bus error name',
+        );
+        check(
+          error.message == 'Folder unavailable',
+          'Missing D-Bus error message',
+        );
       }
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');

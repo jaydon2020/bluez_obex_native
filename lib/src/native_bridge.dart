@@ -34,10 +34,19 @@ class BlueZObexNativeException implements Exception {
   final String operation;
   final int code;
 
-  const BlueZObexNativeException(this.operation, this.code);
+  final String? name;
+  final String? message;
+
+  const BlueZObexNativeException(
+    this.operation,
+    this.code, {
+    this.name,
+    this.message,
+  });
 
   @override
-  String toString() => 'BlueZObexNativeException($operation failed: $code)';
+  String toString() =>
+      'BlueZObexNativeException($operation failed: ${name ?? code}${message == null ? '' : ': $message'})';
 }
 
 class BlueZObexNativeBridge implements ffi.Finalizable {
@@ -262,5 +271,23 @@ void _checkResult(String operation, int code, {required bool allowZero}) {
   if (code > 0 || allowZero && code == 0) {
     return;
   }
-  throw BlueZObexNativeException(operation, code);
+  throw nativeException(operation, code);
+}
+
+BlueZObexNativeException nativeException(String operation, int code) {
+  if (code != -3) return BlueZObexNativeException(operation, code);
+  final name = nativeBindings
+      .bluez_obex_last_error_name()
+      .cast<Utf8>()
+      .toDartString();
+  final message = nativeBindings
+      .bluez_obex_last_error_message()
+      .cast<Utf8>()
+      .toDartString();
+  return BlueZObexNativeException(
+    operation,
+    code,
+    name: name.isEmpty ? null : name,
+    message: message.isEmpty ? null : message,
+  );
 }

@@ -51,6 +51,15 @@ struct BluezObexClientContext {
 namespace {
 std::atomic_bool dart_api_initialized{false};
 std::mutex dart_api_mutex;
+thread_local BlueZObexError last_error;
+
+void record_error(const char *operation, const std::exception &error) {
+  const auto *dbus_error = dynamic_cast<const sdbus::Error *>(&error);
+  last_error = {.objectPath = operation,
+                .name = dbus_error ? std::string{dbus_error->getName()}
+                                   : "org.bluez.obex.Error.Failed",
+                .message = dbus_error ? dbus_error->getMessage() : error.what()};
+}
 
 struct ClientRegistry {
   std::mutex mutex;
@@ -132,10 +141,10 @@ int call_bytes(const char *label, Fn &&fn, uint8_t **out) {
   try {
     return copy_payload(fn(), out);
   } catch (const sdbus::Error &e) {
-    fprintf(stderr, "%s: %s\n", label, e.what());
+    record_error(label, e);
     return -3;
   } catch (const std::exception &e) {
-    fprintf(stderr, "%s: %s\n", label, e.what());
+    record_error(label, e);
     return -3;
   }
 }
@@ -145,16 +154,24 @@ template <typename Fn> int call_status(const char *label, Fn &&fn) {
     fn();
     return 0;
   } catch (const sdbus::Error &e) {
-    fprintf(stderr, "%s: %s\n", label, e.what());
+    record_error(label, e);
     return -3;
   } catch (const std::exception &e) {
-    fprintf(stderr, "%s: %s\n", label, e.what());
+    record_error(label, e);
     return -3;
   }
 }
 } // namespace
 
 extern "C" {
+
+FFI_PLUGIN_EXPORT const char *bluez_obex_last_error_name() {
+  return last_error.name.c_str();
+}
+
+FFI_PLUGIN_EXPORT const char *bluez_obex_last_error_message() {
+  return last_error.message.c_str();
+}
 
 FFI_PLUGIN_EXPORT void bluez_obex_free(void *buffer) { std::free(buffer); }
 
@@ -169,6 +186,7 @@ FFI_PLUGIN_EXPORT void bluez_obex_init(void *dart_api_dl_data) {
 }
 
 FFI_PLUGIN_EXPORT void *bluez_obex_client_create(int64_t events_port) {
+  last_error = {};
   if (!dart_api_initialized.load() || events_port == 0) {
     return nullptr;
   }
@@ -202,10 +220,10 @@ FFI_PLUGIN_EXPORT void *bluez_obex_client_create(int64_t events_port) {
     }
     return handle_of(id);
   } catch (const sdbus::Error &e) {
-    fprintf(stderr, "bluez_obex_client_create: %s\n", e.what());
+    record_error("bluez_obex_client_create", e);
     return nullptr;
   } catch (const std::exception &e) {
-    fprintf(stderr, "bluez_obex_client_create: %s\n", e.what());
+    record_error("bluez_obex_client_create", e);
     return nullptr;
   }
 }
@@ -302,10 +320,10 @@ bluez_obex_session_get_capabilities(void *handle, const char *session_path,
     return copy_string_payload(
         ObexSessionProxy{*ctx->conn, session_path}.get_capabilities(), out);
   } catch (const sdbus::Error &e) {
-    fprintf(stderr, "bluez_obex_session_get_capabilities: %s\n", e.what());
+    record_error("bluez_obex_session_get_capabilities", e);
     return -3;
   } catch (const std::exception &e) {
-    fprintf(stderr, "bluez_obex_session_get_capabilities: %s\n", e.what());
+    record_error("bluez_obex_session_get_capabilities", e);
     return -3;
   }
 }
@@ -386,10 +404,10 @@ FFI_PLUGIN_EXPORT int bluez_obex_get_managed_objects(void *handle, uint8_t **out
   try {
     return copy_payload(ctx->client->get_managed_objects(), out);
   } catch (const sdbus::Error &e) {
-    fprintf(stderr, "bluez_obex_get_managed_objects: %s\n", e.what());
+    record_error("bluez_obex_get_managed_objects", e);
     return -3;
   } catch (const std::exception &e) {
-    fprintf(stderr, "bluez_obex_get_managed_objects: %s\n", e.what());
+    record_error("bluez_obex_get_managed_objects", e);
     return -3;
   }
 }
@@ -547,10 +565,10 @@ bluez_obex_phonebook_get_size(void *handle, const char *phonebook_path) {
   try {
     return ObexPhonebookProxy{*ctx->conn, phonebook_path}.get_size();
   } catch (const sdbus::Error &e) {
-    fprintf(stderr, "bluez_obex_phonebook_get_size: %s\n", e.what());
+    record_error("bluez_obex_phonebook_get_size", e);
     return -3;
   } catch (const std::exception &e) {
-    fprintf(stderr, "bluez_obex_phonebook_get_size: %s\n", e.what());
+    record_error("bluez_obex_phonebook_get_size", e);
     return -3;
   }
 }
