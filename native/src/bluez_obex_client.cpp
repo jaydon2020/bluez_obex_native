@@ -169,7 +169,9 @@ FFI_PLUGIN_EXPORT void bluez_obex_init(void *dart_api_dl_data) {
     return;
   }
   const std::lock_guard lock(dart_api_mutex);
-  dart_api_initialized.store(Dart_InitializeApiDL(dart_api_dl_data) == 0);
+  if (!dart_api_initialized.load()) {
+    dart_api_initialized.store(Dart_InitializeApiDL(dart_api_dl_data) == 0);
+  }
 }
 
 FFI_PLUGIN_EXPORT void *bluez_obex_client_create(int64_t events_port) {

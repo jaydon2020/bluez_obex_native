@@ -7,6 +7,7 @@ void main() {
     'completion',
     'ownership',
     'default_target',
+    'responsive',
   ]) {
     test('native private bus: $scenario', () async {
       final dependencies = await Process.run('/usr/bin/python3', [

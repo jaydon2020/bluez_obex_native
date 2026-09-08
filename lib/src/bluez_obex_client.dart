@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'ffi/types.dart';
 import 'native_bridge.dart';
 
+part 'internal/native_worker.dart';
 
 /// Backend contract used by the public OBEX client classes.
 ///
@@ -137,8 +138,9 @@ class BlueZObexClient {
     String destination, {
     String target = 'pbap',
   }) async {
-    if (target.isEmpty)
+    if (target.isEmpty) {
       throw ArgumentError.value(target, 'target', 'Must not be empty');
+    }
     final props = await _backend.createSession(destination, target: target);
     return BlueZObexSession._(this, props.objectPath, props);
   }
@@ -391,21 +393,21 @@ class BlueZObexMessage {
   }
 }
 
-class NativeBlueZObexBackend implements BlueZObexBackend {
+class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
   final BlueZObexNativeBridge _bridge;
   final ReceivePort _receivePort;
   final StreamSubscription<dynamic> _receiveSubscription;
   final StreamController<BlueZObexEvent> _eventsController;
   bool _disposed = false;
 
-  NativeBlueZObexBackend._(
+  _LocalNativeBlueZObexBackend._(
     this._bridge,
     this._receivePort,
     this._receiveSubscription,
     this._eventsController,
   );
 
-  static Future<NativeBlueZObexBackend> connect() async {
+  static Future<_LocalNativeBlueZObexBackend> connect() async {
     initializeDartDl();
     final receivePort = ReceivePort();
     final eventsController = StreamController<BlueZObexEvent>.broadcast();
@@ -436,7 +438,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
       throw const BlueZObexNativeException('bluez_obex_client_create', -1);
     }
 
-    return NativeBlueZObexBackend._(
+    return _LocalNativeBlueZObexBackend._(
       BlueZObexNativeBridge(handle),
       receivePort,
       receiveSubscription,
@@ -457,7 +459,7 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
 
   @override
   Future<List<BlueZDevice>> getDevices() async {
-    return NativeBlueZObexBackend.queryDevices();
+    return _LocalNativeBlueZObexBackend.queryDevices();
   }
 
   @override
@@ -477,8 +479,9 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     String destination, {
     String target = 'pbap',
   }) async {
-    if (target.isEmpty)
+    if (target.isEmpty) {
       throw ArgumentError.value(target, 'target', 'Must not be empty');
+    }
     final destinationPtr = NativeString(destination);
     final targetPtr = NativeString(target);
     try {
@@ -1162,8 +1165,9 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
     String destination, {
     String target = 'pbap',
   }) async {
-    if (target.isEmpty)
+    if (target.isEmpty) {
       throw ArgumentError.value(target, 'target', 'Must not be empty');
+    }
     final index = _sessionCounter++;
     final path = '/org/bluez/obex/client/session$index';
     final props = BlueZObexSessionProps(

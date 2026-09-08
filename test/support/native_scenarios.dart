@@ -59,6 +59,28 @@ Future<void> main(List<String> args) async {
       } on ArgumentError {
         /* expected */
       }
+    } else if (args.single == 'responsive') {
+      var ticks = 0;
+      final timer = Timer.periodic(
+        const Duration(milliseconds: 10),
+        (_) => ticks++,
+      );
+      try {
+        await client.session('/org/bluez/obex/client/session0').capabilities();
+        check(ticks >= 5, 'Native call blocked Dart timers');
+      } finally {
+        timer.cancel();
+      }
+      await Future.wait([client.dispose(), client.dispose()]);
+      try {
+        await client.getManagedObjects();
+        throw StateError('Accepted call after disposal');
+      } on StateError catch (error) {
+        check(
+          error.message.toString().contains('disposed'),
+          'Unexpected disposal error',
+        );
+      }
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');
     }
