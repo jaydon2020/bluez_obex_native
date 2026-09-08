@@ -27,6 +27,8 @@ class Transfer(dbus.service.Object):
 class Client(dbus.service.Object):
  @dbus.service.method('org.bluez.obex.Client1', in_signature='sa{sv}', out_signature='o')
  def CreateSession(self, destination, args):
+  if args.get('Target') != 'pbap':
+   raise dbus.exceptions.DBusException('Target required', name='org.bluez.obex.Error.InvalidArguments')
   return dbus.ObjectPath('/org/bluez/obex/client/session0')
 client = Client(bus, '/org/bluez/obex')
 class Session(dbus.service.Object):

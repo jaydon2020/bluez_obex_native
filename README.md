@@ -6,6 +6,8 @@ message access.
 ## Getting Started
 
 The public API is object oriented and starts with `BlueZObexClient`.
+Session creation defaults to `pbap`; use `target: 'map'` for messages.
+An explicitly empty target is rejected.
 
 ```dart
 final client = await BlueZObexClient.connect();

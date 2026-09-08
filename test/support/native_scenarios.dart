@@ -51,6 +51,14 @@ Future<void> main(List<String> args) async {
         session.objectPath == '/org/bluez/obex/client/session0',
         'Borrowed another connections session',
       );
+    } else if (args.single == 'default_target') {
+      await client.createSession('AA:BB:CC:DD:EE:FF');
+      try {
+        await client.createSession('AA:BB:CC:DD:EE:FF', target: '');
+        throw StateError('Accepted empty target');
+      } on ArgumentError {
+        /* expected */
+      }
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');
     }

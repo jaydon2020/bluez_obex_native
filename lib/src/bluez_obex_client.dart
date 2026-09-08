@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'ffi/types.dart';
 import 'native_bridge.dart';
 
+
 /// Backend contract used by the public OBEX client classes.
 ///
 /// The default implementation talks to the native FFI library. Tests and the
@@ -19,7 +20,7 @@ abstract class BlueZObexBackend {
   Future<BlueZObexManagedObjects> getManagedObjects();
   Future<BlueZObexSessionProps> createSession(
     String destination, {
-    String target = '',
+    String target = 'pbap',
   });
   Future<void> removeSession(String sessionPath);
   Future<BlueZObexSessionProps> sessionProperties(String sessionPath);
@@ -134,8 +135,10 @@ class BlueZObexClient {
 
   Future<BlueZObexSession> createSession(
     String destination, {
-    String target = '',
+    String target = 'pbap',
   }) async {
+    if (target.isEmpty)
+      throw ArgumentError.value(target, 'target', 'Must not be empty');
     final props = await _backend.createSession(destination, target: target);
     return BlueZObexSession._(this, props.objectPath, props);
   }
@@ -472,8 +475,10 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
   @override
   Future<BlueZObexSessionProps> createSession(
     String destination, {
-    String target = '',
+    String target = 'pbap',
   }) async {
+    if (target.isEmpty)
+      throw ArgumentError.value(target, 'target', 'Must not be empty');
     final destinationPtr = NativeString(destination);
     final targetPtr = NativeString(target);
     try {
@@ -1155,8 +1160,10 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
   @override
   Future<BlueZObexSessionProps> createSession(
     String destination, {
-    String target = '',
+    String target = 'pbap',
   }) async {
+    if (target.isEmpty)
+      throw ArgumentError.value(target, 'target', 'Must not be empty');
     final index = _sessionCounter++;
     final path = '/org/bluez/obex/client/session$index';
     final props = BlueZObexSessionProps(
@@ -1165,7 +1172,7 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
       destination: destination,
       channel: 12,
       psm: 0x1001,
-      target: target.isEmpty ? 'pbap' : target,
+      target: target,
       root: '/telecom',
     );
     _sessions[path] = props;
