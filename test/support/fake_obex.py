@@ -31,6 +31,12 @@ class Client(dbus.service.Object):
    raise dbus.exceptions.DBusException('Target required', name='org.bluez.obex.Error.InvalidArguments')
   return dbus.ObjectPath('/org/bluez/obex/client/session0')
 client = Client(bus, '/org/bluez/obex')
+class MessageAccess(dbus.service.Object):
+ @dbus.service.method('org.bluez.obex.MessageAccess1', in_signature='sa{sv}', out_signature='a(oa{sv})')
+ def ListMessages(self, folder, filters):
+  return [(dbus.ObjectPath('/org/bluez/obex/client/session0/message0'),
+           {'Subject': 'x' * (1024 * 1024 + 1)})]
+message_access = MessageAccess(bus, '/org/bluez/obex/client/large')
 class Session(dbus.service.Object):
  calls = 0
  @dbus.service.method('org.bluez.obex.Session1', out_signature='s')

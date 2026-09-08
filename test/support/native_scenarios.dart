@@ -87,6 +87,14 @@ Future<void> main(List<String> args) async {
           'Unexpected disposal error',
         );
       }
+    } else if (args.single == 'large_result') {
+      final messages = await client
+          .messageAccess('/org/bluez/obex/client/large')
+          .listMessages('');
+      check(
+        messages.single.lastProperties!.subject.length == 1024 * 1024 + 1,
+        'Large native result truncated',
+      );
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');
     }

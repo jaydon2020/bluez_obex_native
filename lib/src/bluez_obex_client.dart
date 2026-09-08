@@ -482,7 +482,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     final destinationPtr = NativeString(destination);
     final targetPtr = NativeString(target);
     try {
-      return _bridge.readGlazeOnce<BlueZObexSessionProps>(
+      return _bridge.readGlaze<BlueZObexSessionProps>(
         'bluez_obex_client_create_session',
         (out) => nativeBindings.bluez_obex_client_create_session(
           _bridge.handle,
@@ -661,7 +661,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     final target = NativeString(targetFile);
     final nativeFilters = NativeStringMap(filters);
     try {
-      return _bridge.readGlazeOnce<BlueZObexTransferResult>(
+      return _bridge.readGlaze<BlueZObexTransferResult>(
         'bluez_obex_phonebook_pull_all',
         (out) => nativeBindings.bluez_obex_phonebook_pull_all(
           _bridge.handle,
@@ -692,7 +692,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     final target = NativeString(targetFile);
     final nativeFilters = NativeStringMap(filters);
     try {
-      return _bridge.readGlazeOnce<BlueZObexTransferResult>(
+      return _bridge.readGlaze<BlueZObexTransferResult>(
         'bluez_obex_phonebook_pull',
         (out) => nativeBindings.bluez_obex_phonebook_pull(
           _bridge.handle,
@@ -919,7 +919,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     final folderPtr = NativeString(folder);
     final nativeFilters = NativeStringMap(filters);
     try {
-      final result = _bridge.readGlazeOnce<BlueZObexMessages>(
+      final result = _bridge.readGlaze<BlueZObexMessages>(
         'bluez_obex_message_access_list_messages',
         (out) => nativeBindings.bluez_obex_message_access_list_messages(
           _bridge.handle,
@@ -930,7 +930,6 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
           nativeFilters.count,
           out,
         ),
-        capacity: 1024 * 1024,
       );
       return result.messages;
     } finally {
@@ -968,7 +967,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     final folderPtr = NativeString(folder);
     final nativeArgs = NativeStringMap(args);
     try {
-      return _bridge.readGlazeOnce<BlueZObexTransferResult>(
+      return _bridge.readGlaze<BlueZObexTransferResult>(
         'bluez_obex_message_access_push_message',
         (out) => nativeBindings.bluez_obex_message_access_push_message(
           _bridge.handle,
@@ -1015,7 +1014,7 @@ class _LocalNativeBlueZObexBackend implements BlueZObexBackend {
     final path = NativeString(messagePath);
     final target = NativeString(targetFile);
     try {
-      return _bridge.readGlazeOnce<BlueZObexTransferResult>(
+      return _bridge.readGlaze<BlueZObexTransferResult>(
         'bluez_obex_message_get',
         (out) => nativeBindings.bluez_obex_message_get(
           _bridge.handle,
