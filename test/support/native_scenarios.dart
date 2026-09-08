@@ -42,6 +42,15 @@ Future<void> main(List<String> args) async {
         ),
         'Lost completion or unchanged cached properties',
       );
+    } else if (args.single == 'ownership') {
+      final session = await client.createSession(
+        'AA:BB:CC:DD:EE:FF',
+        target: 'pbap',
+      );
+      check(
+        session.objectPath == '/org/bluez/obex/client/session0',
+        'Borrowed another connections session',
+      );
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');
     }

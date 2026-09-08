@@ -10,7 +10,10 @@ iface = 'org.bluez.obex.Transfer1'
 class Root(dbus.service.Object):
  @dbus.service.method('org.freedesktop.DBus.ObjectManager', out_signature='a{oa{sa{sv}}}')
  def GetManagedObjects(self):
-  return {path:{iface:{'Status':'active','Session':dbus.ObjectPath('/org/bluez/obex/client/session0')}}}
+  return {path:{iface:{'Status':'active','Session':dbus.ObjectPath('/org/bluez/obex/client/session0')}},
+          '/org/bluez/obex/client/foreign': {'org.bluez.obex.Session1': {
+              'Destination': 'AA:BB:CC:DD:EE:FF',
+              'Target': '0000112f-0000-1000-8000-00805f9b34fb'}}}
  @dbus.service.signal('org.freedesktop.DBus.ObjectManager', signature='oas')
  def InterfacesRemoved(self, path, interfaces): pass
 class Transfer(dbus.service.Object):
@@ -21,6 +24,11 @@ class Transfer(dbus.service.Object):
   self.PropertiesChanged(iface, {'Status':'complete'}, [])
   self.remove_from_connection()
   root.InterfacesRemoved(path,[iface])
+class Client(dbus.service.Object):
+ @dbus.service.method('org.bluez.obex.Client1', in_signature='sa{sv}', out_signature='o')
+ def CreateSession(self, destination, args):
+  return dbus.ObjectPath('/org/bluez/obex/client/session0')
+client = Client(bus, '/org/bluez/obex')
 class Session(dbus.service.Object):
  @dbus.service.method('org.bluez.obex.Session1', out_signature='s')
  def GetCapabilities(self):

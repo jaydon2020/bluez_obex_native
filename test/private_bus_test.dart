@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 void main() {
-  for (final scenario in ['disconnect', 'completion']) {
+  for (final scenario in ['disconnect', 'completion', 'ownership']) {
     test('native private bus: $scenario', () async {
       final dependencies = await Process.run('/usr/bin/python3', [
         '-c',
