@@ -32,6 +32,9 @@ class Client(dbus.service.Object):
   return dbus.ObjectPath('/org/bluez/obex/client/session0')
 client = Client(bus, '/org/bluez/obex')
 class MessageAccess(dbus.service.Object):
+ @dbus.service.method('org.bluez.obex.MessageAccess1', in_signature='s')
+ def SetFolder(self, folder):
+  raise dbus.exceptions.DBusException('Folder unavailable', name='org.bluez.obex.Error.Failed')
  @dbus.service.method('org.bluez.obex.MessageAccess1', in_signature='sa{sv}', out_signature='a(oa{sv})')
  def ListMessages(self, folder, filters):
   return [(dbus.ObjectPath('/org/bluez/obex/client/session0/message0'),

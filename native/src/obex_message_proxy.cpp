@@ -109,12 +109,7 @@ BlueZObexMessages ObexMessageAccessProxy::list_messages(
   const auto parent = normalized.substr(0, separator);
   const auto child = normalized.substr(separator + 1);
   if (!parent.empty()) {
-    try {
-      message_access.SetFolder(std::string{parent});
-    } catch (const sdbus::Error &) {
-      return to_messages(
-          message_access.ListMessages(std::string{child}, filter));
-    }
+    message_access.SetFolder(std::string{parent});
   }
   return to_messages(message_access.ListMessages(std::string{child}, filter));
 }

@@ -95,6 +95,15 @@ Future<void> main(List<String> args) async {
         messages.single.lastProperties!.subject.length == 1024 * 1024 + 1,
         'Large native result truncated',
       );
+    } else if (args.single == 'folder_failure') {
+      try {
+        await client
+            .messageAccess('/org/bluez/obex/client/large')
+            .listMessages('missing/inbox');
+        throw StateError('Returned messages despite failed navigation');
+      } on BlueZObexNativeException {
+        /* expected */
+      }
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');
     }
