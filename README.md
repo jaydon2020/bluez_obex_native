@@ -97,6 +97,16 @@ await client.dispose();
 * [API reference](docs/api.md)
 * [Verification guide](docs/verification.md)
 
+## Acknowledgements
+
+* [bluez_native](https://github.com/jwinarske/bluez_native) (Apache-2.0): the
+  Native Assets build hook, library loader, glaze binary codec, FFI handle
+  lifetime design, and development scripts are derived from this project.
+* [appstream_dart](https://github.com/meta-flutter/appstream_dart)
+  (Apache-2.0): the original pattern for the build hook and library loader.
+* [sdbus-c++](https://github.com/Kistler-Group/sdbus-cpp) (LGPL-2.1): the
+  D-Bus C++ binding used by the native library.
+
 ## Verification
 
 ```sh

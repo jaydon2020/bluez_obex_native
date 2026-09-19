@@ -6,7 +6,10 @@
  */
 
 // codec.dart - GlazeCodec for decoding BlueZ OBEX native payloads.
-// Matches the binary encoding in glaze_meta.h (little-endian, length-prefixed).
+//
+// Matches glaze_meta.h: little-endian with uint32 length/count prefixes.
+// Adapted from https://github.com/jwinarske/bluez_native under Apache-2.0;
+// see LICENSES/Apache-2.0.txt.
 
 import 'dart:convert';
 import 'dart:typed_data';

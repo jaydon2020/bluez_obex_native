@@ -5,8 +5,11 @@
  * found in the LICENSE file.
  */
 
-// types.dart - Dart-side mirrors for glaze-decoded BlueZ OBEX payloads.
-// These match native/include/bluez_obex_types.h.
+// types.dart - Dart-side struct mirrors for glaze-decoded BlueZ OBEX payloads.
+//
+// These match the C++ structs in native/include/bluez_obex_types.h.
+// Adapted from https://github.com/jwinarske/bluez_native under Apache-2.0;
+// see LICENSES/Apache-2.0.txt.
 
 /// A string representation of a D-Bus variant property.
 class BlueZObexProperty {

@@ -6,6 +6,13 @@
  */
 
 // Native assets build hook for bluez_obex_native.
+//
+// Builds libbluez_obex_native.so with CMake and exposes it as a bundled
+// CodeAsset. Patterned after https://github.com/jwinarske/bluez_native,
+// which is in turn patterned after
+// https://github.com/meta-flutter/appstream_dart/blob/main/hook/build.dart.
+// Both upstream projects are licensed under Apache-2.0; see
+// LICENSES/Apache-2.0.txt.
 
 import 'dart:io';
 
