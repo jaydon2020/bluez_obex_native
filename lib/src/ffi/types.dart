@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2026 Jian De jiande2020@gmail.com. All rights reserved.
+ *
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
 // types.dart - Dart-side mirrors for glaze-decoded BlueZ OBEX payloads.
 // These match native/include/bluez_obex_types.h.
 

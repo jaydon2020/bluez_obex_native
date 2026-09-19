@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2026 Jian De jiande2020@gmail.com. All rights reserved.
+ *
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
 // glaze_meta.h — lightweight compile-time struct reflection for native_comms
 // Channel B payloads. Provides glz::meta<T> and glz::field() used by
 // bluez_types.h to describe struct fields for binary serialization.

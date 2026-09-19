@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2026 Jian De jiande2020@gmail.com. All rights reserved.
+ *
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
 // bluez_obex_client.cpp - C ABI entry points for BlueZ OBEX native client.
 
 #include "bluez_obex_native.h"
