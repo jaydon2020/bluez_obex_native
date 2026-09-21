@@ -11,6 +11,16 @@ import 'package:flutter_phone_message/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  const connectedPhone = BlueZDevice(
+    address: 'AA:BB:CC:DD:EE:FF',
+    name: 'Test phone',
+    connected: true,
+    uuids: [
+      '0000112f-0000-1000-8000-00805f9b34fb',
+      '00001132-0000-1000-8000-00805f9b34fb',
+    ],
+  );
+
   test('unsupported capabilities do not block profile operations', () async {
     expect(await readOptionalCapabilities(() async => 'PBAP'), 'PBAP');
     for (final error in [
@@ -41,7 +51,16 @@ void main() {
   });
 
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const FlutterPhoneMessageApp());
+    await tester.pumpWidget(
+      FlutterPhoneMessageApp(
+        discoverDevices: () async => [
+          connectedPhone,
+          const BlueZDevice(address: '11:22:33:44:55:66', name: 'Offline'),
+        ],
+        createClient: (workspace) =>
+            BlueZObexClient.simulated(outputDirectory: workspace),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -84,21 +103,56 @@ void main() {
     }
   }
 
-  testWidgets('uses responsive navigation and shows endpoint state', (
+  testWidgets('uses a light theme and shows only connected devices', (
     tester,
   ) async {
     await pumpApp(tester);
 
     expect(find.text('OBEX Phone Studio'), findsOneWidget);
-    expect(find.text('Simulated endpoint'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.text('OBEX Phone Studio'))).brightness,
+      Brightness.light,
+    );
+    expect(find.textContaining('Test phone'), findsWidgets);
+    expect(find.textContaining('Offline'), findsNothing);
+    expect(find.text('Simulated'), findsNothing);
+    expect(find.text('Connect'), findsNothing);
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Phone data, without hidden state'), findsOneWidget);
+    expect(find.text('Choose a phone to explore'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(const Size(1200, 900));
     await tester.pumpAndSettle();
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
     addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
+
+  testWidgets('explains how to proceed when no device is connected', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      FlutterPhoneMessageApp(discoverDevices: () async => const []),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No connected phone found'), findsOneWidget);
+    expect(find.text('Refresh devices'), findsOneWidget);
+    expect(find.text('Connect'), findsNothing);
+    await navigate(tester, 'Contacts');
+    expect(
+      find.text('Choose a connected phone on Overview first.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('overview fits a phone viewport', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(375, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpApp(tester);
+    expect(tester.takeException(), isNull);
+    expect(find.text('Choose a phone to explore'), findsOneWidget);
+    await tester.binding.setSurfaceSize(const Size(700, 375));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('runs all PBAP controls and reports invalid vCards', (
@@ -110,7 +164,7 @@ void main() {
     await navigate(tester, 'Contacts');
 
     for (final label in [
-      'Open PBAP',
+      'Load phonebook details',
       'Select',
       'List',
       'Search',
@@ -123,9 +177,11 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
 
-    await tapAction(tester, 'Open PBAP');
+    await tapAction(tester, 'List');
+    expect(find.text('Ada Lovelace'), findsOneWidget);
+    await tapAction(tester, 'Load phonebook details');
     expect(find.text('SIMULATED-DB'), findsOneWidget);
-    expect(find.text('2 entries'), findsOneWidget);
+    expect(find.text('2 entries'), findsWidgets);
 
     await tapAction(tester, 'Select');
     expect(find.text('int/pb'), findsOneWidget);
@@ -185,7 +241,7 @@ void main() {
     await navigate(tester, 'Messages');
 
     for (final label in [
-      'Open MAP',
+      'Load message details',
       'Set folder',
       'List folders',
       'List messages',
@@ -196,7 +252,7 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
 
-    await tapAction(tester, 'Open MAP');
+    await tapAction(tester, 'Load message details');
     expect(find.textContaining('SMS_GSM'), findsOneWidget);
 
     await tapAction(tester, 'Set folder');
@@ -258,7 +314,6 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
-    await tapAction(tester, 'Connect');
     await tester.pumpWidget(const MaterialApp(home: SizedBox()));
     await tester.pumpAndSettle();
 

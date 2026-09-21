@@ -3,13 +3,14 @@
 Flutter Linux control surface for the complete PBAP, MAP, and Transfer1 API
 exposed by `bluez_obex_native`.
 
-The app starts with a deterministic simulated phone. Select **System BlueZ**
-to use a connected physical phone. The phone must advertise the PBAP or MAP
-UUID before the matching workspace is enabled.
+The app lists Bluetooth devices already connected to this computer and selects
+the first one automatically. Choose another connected device on **Overview**
+or refresh after connecting a phone in system settings. PBAP and MAP sessions
+open when you use their controls; the phone must advertise the matching UUID.
 
 ## Workspaces
 
-- **Overview** — endpoint selection, BlueZ devices, managed objects, Session1
+- **Overview** — connected device selection, managed objects, Session1
   properties, and capabilities.
 - **Contacts** — Select, List, Search, PullAll, Pull, GetSize, UpdateVersion,
   ListFilterFields, all PhonebookAccess1 properties, and parsed vCard fields.

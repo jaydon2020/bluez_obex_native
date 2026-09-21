@@ -32,19 +32,32 @@ Future<String> readOptionalCapabilities(Future<String> Function() read) async {
 }
 
 class FlutterPhoneMessageApp extends StatelessWidget {
-  final bool simulatedByDefault;
+  final Future<List<BlueZDevice>> Function()? discoverDevices;
+  final Future<BlueZObexClient> Function(Directory)? createClient;
 
-  const FlutterPhoneMessageApp({super.key, this.simulatedByDefault = true});
+  const FlutterPhoneMessageApp({
+    super.key,
+    this.discoverDevices,
+    this.createClient,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xff006a6a);
+    const seed = Color(0xff176b75);
     return MaterialApp(
       title: 'OBEX Phone Studio',
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.light,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed),
-        scaffoldBackgroundColor: const Color(0xfff5f7f6),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: seed,
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: const Color(0xfff4f7f8),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xfff4f7f8),
+          surfaceTintColor: Colors.transparent,
+        ),
         cardTheme: const CardThemeData(
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
@@ -55,29 +68,25 @@ class FlutterPhoneMessageApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seed,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
+      home: PhoneMessageHome(
+        discoverDevices: discoverDevices,
+        createClient: createClient,
       ),
-      home: PhoneMessageHome(simulatedByDefault: simulatedByDefault),
     );
   }
 }
 
 class PhoneMessageHome extends StatefulWidget {
-  final bool simulatedByDefault;
+  final Future<List<BlueZDevice>> Function()? discoverDevices;
+  final Future<BlueZObexClient> Function(Directory)? createClient;
 
-  const PhoneMessageHome({super.key, this.simulatedByDefault = true});
+  const PhoneMessageHome({super.key, this.discoverDevices, this.createClient});
 
   @override
   State<PhoneMessageHome> createState() => _PhoneMessageHomeState();
 }
 
 class _PhoneMessageHomeState extends State<PhoneMessageHome> {
-  final _addressController = TextEditingController(text: 'AA:BB:CC:DD:EE:FF');
   final _limitController = TextEditingController(text: '25');
   final _offsetController = TextEditingController(text: '0');
   final _phonebookLocationController = TextEditingController(text: 'int');
@@ -124,7 +133,6 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   int? _phonebookSize;
   int _pageIndex = 0;
   int _clientEpoch = 0;
-  bool _simulated = true;
   bool _busy = false;
   bool _closing = false;
   bool _limitAll = false;
@@ -149,19 +157,13 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   }
 
   bool get _canUsePbap =>
-      _simulated ||
-      (_selectedDevice?.connected == true &&
-          _selectedDevice!.supportsProfileUuid(_pbapUuid));
+      _selectedDevice?.supportsProfileUuid(_pbapUuid) == true;
 
-  bool get _canUseMap =>
-      _simulated ||
-      (_selectedDevice?.connected == true &&
-          _selectedDevice!.supportsProfileUuid(_mapUuid));
+  bool get _canUseMap => _selectedDevice?.supportsProfileUuid(_mapUuid) == true;
 
   @override
   void initState() {
     super.initState();
-    _simulated = widget.simulatedByDefault;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_alive) unawaited(_run('Discover devices', _refreshDevices));
     });
@@ -190,7 +192,6 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       ),
     );
     for (final controller in [
-      _addressController,
       _limitController,
       _offsetController,
       _phonebookLocationController,
@@ -290,13 +291,22 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   Future<BlueZObexClient> _ensureClient() async {
     final existing = _client;
     if (existing != null) return existing;
+    if (_selectedDevice == null) {
+      throw StateError('Choose a connected Bluetooth device first');
+    }
 
     final workspace = Directory.systemTemp.createTempSync(
       'flutter_phone_message_',
     );
-    final client = _simulated
-        ? await BlueZObexClient.simulated(outputDirectory: workspace)
-        : await BlueZObexClient.connect();
+    late final BlueZObexClient client;
+    try {
+      client =
+          await (widget.createClient?.call(workspace) ??
+              BlueZObexClient.connect());
+    } catch (_) {
+      await workspace.delete(recursive: true);
+      rethrow;
+    }
     if (!_alive) {
       await client.dispose();
       await workspace.delete(recursive: true);
@@ -327,10 +337,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       _workspace = workspace;
       _client = client;
       _eventSubscription = subscription;
-      _addActivity(
-        'Endpoint connected',
-        detail: _simulated ? 'Simulated BlueZ OBEX' : 'System BlueZ OBEX',
-      );
+      _addActivity('OBEX ready', detail: _selectedDevice!.name);
     });
     return client;
   }
@@ -380,33 +387,23 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     _mapCapabilities = '';
   }
 
-  Future<void> _switchEndpoint(bool simulated) {
-    return _run('Switch endpoint', () async {
-      await _disconnect();
-      if (!_alive) return;
-      setState(() {
-        _simulated = simulated;
-        _devices = const [];
-        _selectedAddress = null;
-      });
-      await _refreshDevices();
-    });
-  }
-
   Future<void> _refreshDevices() async {
-    final devices = await BlueZObexClient.devices(simulated: _simulated);
+    final discovered =
+        await (widget.discoverDevices?.call() ?? BlueZObexClient.devices());
     if (!_alive) return;
+    final devices = discovered.where((device) => device.connected).toList();
     final current = _selectedAddress;
     final selected = devices.any((device) => device.address == current)
         ? current
-        : devices.where((device) => device.connected).firstOrNull?.address ??
-              devices.firstOrNull?.address;
+        : devices.firstOrNull?.address;
+    if (selected != current) await _disconnect();
+    if (!_alive) return;
     setState(() {
       _devices = devices;
       _selectedAddress = selected;
-      if (selected != null) _addressController.text = selected;
-      _addActivity('Devices refreshed', detail: '${devices.length} found');
+      _addActivity('Devices refreshed', detail: '${devices.length} connected');
     });
+    if (selected != null) await _ensureClient();
   }
 
   Future<void> _selectDevice(String? address) async {
@@ -414,31 +411,21 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     await _run('Change device', () async {
       await _disconnect();
       if (_alive) {
-        setState(() {
-          _selectedAddress = address;
-          _addressController.text = address;
-        });
+        setState(() => _selectedAddress = address);
+        await _ensureClient();
       }
     });
   }
 
   String _destinationFor(String profile, String uuid) {
-    final address = _simulated
-        ? (_selectedAddress ?? _addressController.text.trim())
-        : _selectedDevice?.address;
-    if (address == null || address.isEmpty) {
-      throw StateError('Choose a Bluetooth device first');
+    final device = _selectedDevice;
+    if (device == null) {
+      throw StateError('Choose a connected Bluetooth device first');
     }
-    if (!_simulated) {
-      final device = _selectedDevice;
-      if (device == null || !device.connected) {
-        throw StateError('The selected device is not connected');
-      }
-      if (!device.supportsProfileUuid(uuid)) {
-        throw StateError('${device.name} does not advertise $profile');
-      }
+    if (!device.supportsProfileUuid(uuid)) {
+      throw StateError('${device.name} does not advertise $profile');
     }
-    return address;
+    return device.address;
   }
 
   Future<BlueZObexSession> _ensurePbapSession() async {
@@ -1079,22 +1066,20 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
           children: [
             Text('OBEX Phone Studio'),
             Text(
-              'PBAP + MAP control surface',
+              'Contacts and messages',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Chip(
-              avatar: Icon(
-                _simulated ? Icons.science_outlined : Icons.bluetooth,
-                size: 18,
-              ),
-              label: Text(_simulated ? 'Simulated endpoint' : 'System BlueZ'),
-            ),
+          IconButton(
+            tooltip: 'Refresh connected devices',
+            onPressed: _busy
+                ? null
+                : () => _run('Discover devices', _refreshDevices),
+            icon: const Icon(Icons.refresh),
           ),
+          const SizedBox(width: 8),
         ],
         bottom: _busy
             ? PreferredSize(
@@ -1182,10 +1167,10 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
 
   Widget _overviewPage() => _pageList([
     const _PageHeader(
-      eyebrow: 'BLUEZ OBEX',
-      title: 'Phone data, without hidden state',
+      eyebrow: 'CONNECTED DEVICES',
+      title: 'Choose a phone to explore',
       description:
-          'Connect once, inspect every interface, and watch PBAP/MAP events as they happen.',
+          'Select a Bluetooth device already connected to this computer. Contacts and messages open when you use them.',
     ),
     const SizedBox(height: 16),
     _responsiveCards([_connectionCard(), _statusCard()]),
@@ -1197,98 +1182,50 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   ]);
 
   Widget _connectionCard() => _SectionCard(
-    title: 'Endpoint',
-    subtitle: 'Choose simulation or a connected BlueZ phone.',
+    title: 'Your phone',
+    subtitle: 'Only currently connected Bluetooth devices are shown.',
     icon: Icons.bluetooth_searching,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(
-              value: true,
-              icon: Icon(Icons.science_outlined),
-              label: Text('Simulated'),
-            ),
-            ButtonSegment(
-              value: false,
-              icon: Icon(Icons.bluetooth),
-              label: Text('System BlueZ'),
-            ),
-          ],
-          selected: {_simulated},
-          onSelectionChanged: _busy
-              ? null
-              : (selection) => unawaited(_switchEndpoint(selection.single)),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                key: ValueKey(
-                  '${_simulated}_${_devices.length}_$_selectedAddress',
-                ),
-                initialValue:
-                    _devices.any((device) => device.address == _selectedAddress)
-                    ? _selectedAddress
-                    : null,
-                decoration: const InputDecoration(labelText: 'BlueZ device'),
-                isExpanded: true,
-                items: [
-                  for (final device in _devices)
-                    DropdownMenuItem(
-                      value: device.address,
-                      child: Text(
-                        '${device.name} · ${device.address}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: _busy
-                    ? null
-                    : (value) => unawaited(_selectDevice(value)),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.filledTonal(
-              tooltip: 'Refresh devices',
+        if (_devices.isEmpty) ...[
+          const _EmptyState(
+            icon: Icons.bluetooth_disabled,
+            message:
+                'No connected phone found. Connect one in Bluetooth settings, then refresh devices.',
+          ),
+          Align(
+            child: OutlinedButton.icon(
               onPressed: _busy
                   ? null
                   : () => _run('Discover devices', _refreshDevices),
               icon: const Icon(Icons.refresh),
+              label: const Text('Refresh devices'),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _addressController,
-          enabled: _simulated && !_busy,
-          decoration: const InputDecoration(labelText: 'Bluetooth address'),
-        ),
-        const SizedBox(height: 12),
-        _DeviceSupport(device: _selectedDevice, simulated: _simulated),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            FilledButton.icon(
-              onPressed: _busy
-                  ? null
-                  : () => _run('Connect endpoint', _ensureClient),
-              icon: const Icon(Icons.power),
-              label: Text(_client == null ? 'Connect' : 'Connected'),
-            ),
-            OutlinedButton.icon(
-              onPressed: _busy || _client == null
-                  ? null
-                  : () => _run('Disconnect endpoint', _disconnect),
-              icon: const Icon(Icons.power_off),
-              label: const Text('Disconnect'),
-            ),
-          ],
-        ),
+          ),
+        ] else ...[
+          DropdownButtonFormField<String>(
+            key: ValueKey('${_devices.length}_$_selectedAddress'),
+            initialValue: _selectedAddress,
+            decoration: const InputDecoration(labelText: 'Connected device'),
+            isExpanded: true,
+            items: [
+              for (final device in _devices)
+                DropdownMenuItem(
+                  value: device.address,
+                  child: Text(
+                    '${device.name} · ${device.address}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+            onChanged: _busy
+                ? null
+                : (value) => unawaited(_selectDevice(value)),
+          ),
+          const SizedBox(height: 16),
+          _DeviceSupport(device: _selectedDevice),
+        ],
       ],
     ),
   );
@@ -1302,7 +1239,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       actions: [
         IconButton(
           tooltip: 'Refresh managed objects',
-          onPressed: _busy
+          onPressed: _busy || _client == null
               ? null
               : () => _run('Refresh objects', _refreshManagedObjects),
           icon: const Icon(Icons.refresh),
@@ -1363,8 +1300,8 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     _profileActions(
       enabled: _canUsePbap,
       connected: _pbapSession != null,
-      openLabel: 'Open PBAP',
-      onOpen: () => _run('Open PBAP', _openPbap),
+      openLabel: 'Load phonebook details',
+      onOpen: () => _run('Load phonebook details', _openPbap),
       onClose: () => _run('Close PBAP', _closePbap),
       actions: [
         _Action('Select', Icons.folder_open, _selectPhonebook),
@@ -1496,8 +1433,8 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     _profileActions(
       enabled: _canUseMap,
       connected: _mapSession != null,
-      openLabel: 'Open MAP',
-      onOpen: () => _run('Open MAP', _openMap),
+      openLabel: 'Load message details',
+      onOpen: () => _run('Load message details', _openMap),
       onClose: () => _run('Close MAP', _closeMap),
       actions: [
         _Action('Set folder', Icons.drive_file_move, _setMessageFolder),
@@ -1613,7 +1550,8 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     final props = _messageAccessProps;
     return _SectionCard(
       title: 'Message access metadata',
-      subtitle: props?.objectPath ?? 'Open MAP to inspect capabilities.',
+      subtitle:
+          props?.objectPath ?? 'Load message details to inspect capabilities.',
       icon: Icons.sms_outlined,
       child: _MetadataTable(
         rows: [
@@ -1923,7 +1861,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       child: _activity.isEmpty
           ? const _EmptyState(
               icon: Icons.notifications_none,
-              message: 'Events will appear here after connecting.',
+              message: 'Events will appear here after selecting a phone.',
             )
           : Column(
               children: [
@@ -1955,7 +1893,9 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   }) => _SectionCard(
     title: 'Operations',
     subtitle: enabled
-        ? 'Every BlueZ profile method is available below.'
+        ? 'Choose any action; the profile session opens automatically.'
+        : _selectedDevice == null
+        ? 'Choose a connected phone on Overview first.'
         : 'The selected device does not advertise this profile.',
     icon: Icons.terminal,
     child: Wrap(
@@ -1970,7 +1910,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
         OutlinedButton.icon(
           onPressed: _busy || !connected ? null : onClose,
           icon: const Icon(Icons.link_off),
-          label: const Text('Close session'),
+          label: const Text('Release session'),
         ),
         for (final action in actions)
           FilledButton.tonalIcon(
@@ -2305,9 +2245,8 @@ class _EmptyState extends StatelessWidget {
 
 class _DeviceSupport extends StatelessWidget {
   final BlueZDevice? device;
-  final bool simulated;
 
-  const _DeviceSupport({required this.device, required this.simulated});
+  const _DeviceSupport({required this.device});
 
   @override
   Widget build(BuildContext context) {
@@ -2317,20 +2256,16 @@ class _DeviceSupport extends StatelessWidget {
       runSpacing: 8,
       children: [
         _SupportChip(
-          label: selected?.connected == true || simulated
-              ? 'Connected'
-              : 'Disconnected',
-          supported: selected?.connected == true || simulated,
+          label: selected?.connected == true ? 'Connected' : 'Disconnected',
+          supported: selected?.connected == true,
         ),
         _SupportChip(
           label: 'PBAP',
-          supported:
-              simulated || selected?.supportsProfileUuid(_pbapUuid) == true,
+          supported: selected?.supportsProfileUuid(_pbapUuid) == true,
         ),
         _SupportChip(
           label: 'MAP',
-          supported:
-              simulated || selected?.supportsProfileUuid(_mapUuid) == true,
+          supported: selected?.supportsProfileUuid(_mapUuid) == true,
         ),
       ],
     );
