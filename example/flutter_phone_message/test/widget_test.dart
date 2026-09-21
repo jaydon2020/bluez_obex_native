@@ -5,11 +5,41 @@
  * found in the LICENSE file.
  */
 
+import 'package:bluez_obex_native/bluez_obex_native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_phone_message/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('unsupported capabilities do not block profile operations', () async {
+    expect(await readOptionalCapabilities(() async => 'PBAP'), 'PBAP');
+    for (final error in [
+      const BlueZObexNativeException(
+        'bluez_obex_session_get_capabilities',
+        -1,
+        name: 'org.bluez.obex.Error.NotSupported',
+      ),
+      const BlueZObexNativeException(
+        'bluez_obex_session_get_capabilities',
+        -1,
+        name: 'org.bluez.obex.Error.Failed',
+        message: 'Not Acceptable',
+      ),
+    ]) {
+      expect(await readOptionalCapabilities(() async => throw error), isEmpty);
+    }
+    final error = const BlueZObexNativeException(
+      'bluez_obex_session_get_capabilities',
+      -1,
+      name: 'org.bluez.obex.Error.Failed',
+      message: 'Connection lost',
+    );
+    await expectLater(
+      readOptionalCapabilities(() async => throw error),
+      throwsA(same(error)),
+    );
+  });
+
   Future<void> pumpApp(WidgetTester tester) async {
     await tester.pumpWidget(const FlutterPhoneMessageApp());
     await tester.pumpAndSettle();

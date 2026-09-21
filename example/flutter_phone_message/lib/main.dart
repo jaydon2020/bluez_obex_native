@@ -18,6 +18,19 @@ const _mapUuid = '00001132-0000-1000-8000-00805f9b34fb';
 
 void main() => runApp(const FlutterPhoneMessageApp());
 
+Future<String> readOptionalCapabilities(Future<String> Function() read) async {
+  try {
+    return await read();
+  } on BlueZObexNativeException catch (error) {
+    if (error.name == 'org.bluez.obex.Error.NotSupported' ||
+        (error.name == 'org.bluez.obex.Error.Failed' &&
+            error.message == 'Not Acceptable')) {
+      return '';
+    }
+    rethrow;
+  }
+}
+
 class FlutterPhoneMessageApp extends StatelessWidget {
   final bool simulatedByDefault;
 
@@ -437,7 +450,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       target: 'pbap',
     );
     final props = await session.properties();
-    final capabilities = await session.capabilities();
+    final capabilities = await readOptionalCapabilities(session.capabilities);
     if (!_alive) {
       await session.remove();
       throw StateError('The view was closed while creating PBAP');
@@ -459,7 +472,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       target: 'map',
     );
     final props = await session.properties();
-    final capabilities = await session.capabilities();
+    final capabilities = await readOptionalCapabilities(session.capabilities);
     if (!_alive) {
       await session.remove();
       throw StateError('The view was closed while creating MAP');
