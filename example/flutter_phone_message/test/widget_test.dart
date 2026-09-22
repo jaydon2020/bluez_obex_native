@@ -155,6 +155,21 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('PBAP search limits the field to BlueZ choices', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpApp(tester);
+    await navigate(tester, 'Contacts');
+
+    await tester.tap(find.text('Name').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Number'), findsOneWidget);
+    expect(find.text('Sound'), findsOneWidget);
+    await tester.tap(find.text('Number').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Number'), findsOneWidget);
+  });
+
   testWidgets('runs all PBAP controls and reports invalid vCards', (
     tester,
   ) async {

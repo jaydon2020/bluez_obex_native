@@ -91,7 +91,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   final _offsetController = TextEditingController(text: '0');
   final _phonebookLocationController = TextEditingController(text: 'int');
   final _phonebookNameController = TextEditingController(text: 'pb');
-  final _searchFieldController = TextEditingController(text: 'name');
+  String _searchField = 'name';
   final _searchController = TextEditingController(text: 'Ada');
   final _vcardController = TextEditingController(text: '1.vcf');
   final _folderController = TextEditingController(text: 'telecom/msg/inbox');
@@ -196,7 +196,6 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       _offsetController,
       _phonebookLocationController,
       _phonebookNameController,
-      _searchFieldController,
       _searchController,
       _vcardController,
       _folderController,
@@ -547,7 +546,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   Future<void> _searchContacts() async {
     final phonebook = (await _ensurePbapSession()).phonebook;
     final contacts = await phonebook.search(
-      _searchFieldController.text.trim(),
+      _searchField,
       _searchController.text.trim(),
       filters: _listFilters(),
     );
@@ -1379,9 +1378,17 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
         ),
         const SizedBox(height: 12),
         _fieldPair(
-          TextField(
-            controller: _searchFieldController,
-            decoration: const InputDecoration(labelText: 'Search field'),
+          DropdownButtonFormField<String>(
+            initialValue: _searchField,
+            decoration: const InputDecoration(labelText: 'Search by'),
+            items: const [
+              DropdownMenuItem(value: 'name', child: Text('Name')),
+              DropdownMenuItem(value: 'number', child: Text('Number')),
+              DropdownMenuItem(value: 'sound', child: Text('Sound')),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _searchField = value);
+            },
           ),
           TextField(
             controller: _searchController,
