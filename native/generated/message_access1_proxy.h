@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2026 Jian De jiande2020@gmail.com. All rights reserved.
  *
@@ -62,9 +63,9 @@ public:
         return result;
     }
 
-    std::vector<sdbus::Struct<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>> ListMessages(const std::string& folder, const std::map<std::string, sdbus::Variant>& filter)
+    std::map<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>> ListMessages(const std::string& folder, const std::map<std::string, sdbus::Variant>& filter)
     {
-        std::vector<sdbus::Struct<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>> result;
+        std::map<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>> result;
         m_proxy.callMethod("ListMessages").onInterface(INTERFACE_NAME).withArguments(folder, filter).storeResultsTo(result);
         return result;
     }

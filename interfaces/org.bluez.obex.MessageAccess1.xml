@@ -14,7 +14,7 @@
     <method name="ListMessages">
       <arg name="folder" type="s" direction="in"/>
       <arg name="filter" type="a{sv}" direction="in"/>
-      <arg name="messages" type="a(oa{sv})" direction="out"/>
+      <arg name="messages" type="a{oa{sv}}" direction="out"/>
     </method>
     <method name="UpdateInbox"/>
     <method name="PushMessage">

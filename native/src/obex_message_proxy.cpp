@@ -46,14 +46,12 @@ to_folders(const std::vector<std::map<std::string, sdbus::Variant>> &items) {
 }
 
 BlueZObexMessages to_messages(
-    const std::vector<
-        sdbus::Struct<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>>
+    const std::map<sdbus::ObjectPath, std::map<std::string, sdbus::Variant>>
         &items) {
   BlueZObexMessages result;
   result.messages.reserve(items.size());
-  for (const auto &item : items) {
-    result.messages.push_back(
-        obex::message_props_from_map(std::get<0>(item), std::get<1>(item)));
+  for (const auto &[path, props] : items) {
+    result.messages.push_back(obex::message_props_from_map(path, props));
   }
   return result;
 }
