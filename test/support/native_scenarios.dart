@@ -131,6 +131,16 @@ Future<void> main(List<String> args) async {
           'Missing D-Bus error message',
         );
       }
+    } else if (args.single == 'map_navigation') {
+      final access = client.messageAccess('/org/bluez/obex/client/navigation');
+      await access.setFolder('/telecom/msg/inbox');
+      for (var i = 0; i < 2; i++) {
+        final messages = await access.listMessages('telecom/msg/inbox');
+        check(
+          messages.single.lastProperties?.subject == 'Navigated inbox',
+          'Failed to list inbox after changing the working folder',
+        );
+      }
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');
     }

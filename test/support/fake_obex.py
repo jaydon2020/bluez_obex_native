@@ -40,6 +40,22 @@ class MessageAccess(dbus.service.Object):
   return [(dbus.ObjectPath('/org/bluez/obex/client/session0/message0'),
            {'Subject': 'x' * (1024 * 1024 + 1)})]
 message_access = MessageAccess(bus, '/org/bluez/obex/client/large')
+class Navigation(dbus.service.Object):
+ def __init__(self, bus, path):
+  super().__init__(bus, path)
+  self.folder = '/'
+ @dbus.service.method('org.bluez.obex.MessageAccess1', in_signature='s')
+ def SetFolder(self, folder):
+  if folder not in ('/telecom/msg', '/telecom/msg/inbox'):
+   raise dbus.exceptions.DBusException('Bad Request', name='org.bluez.obex.Error.Failed')
+  self.folder = folder
+ @dbus.service.method('org.bluez.obex.MessageAccess1', in_signature='sa{sv}', out_signature='a(oa{sv})')
+ def ListMessages(self, folder, filters):
+  if self.folder != '/telecom/msg' or folder != 'inbox':
+   raise dbus.exceptions.DBusException('Wrong folder', name='org.bluez.obex.Error.Failed')
+  return [(dbus.ObjectPath('/org/bluez/obex/client/navigation/message0'),
+           {'Subject': 'Navigated inbox'})]
+navigation = Navigation(bus, '/org/bluez/obex/client/navigation')
 class Session(dbus.service.Object):
  calls = 0
  @dbus.service.method('org.bluez.obex.Session1', out_signature='s')

@@ -17,6 +17,7 @@ void main() {
     'responsive',
     'large_result',
     'folder_failure',
+    'map_navigation',
     'restart',
   ]) {
     test('native private bus: $scenario', () async {

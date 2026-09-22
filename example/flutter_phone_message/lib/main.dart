@@ -628,8 +628,12 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
   }
 
   Future<void> _setMessageFolder() async {
+    final folder = _folderController.text.trim();
+    if (folder.isEmpty) {
+      throw const FormatException('Enter a message folder path');
+    }
     await (await _ensureMapSession()).messageAccess.setFolder(
-      _folderController.text.trim(),
+      folder.startsWith('/') ? folder : '/$folder',
     );
   }
 
@@ -1502,7 +1506,10 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       children: [
         TextField(
           controller: _folderController,
-          decoration: const InputDecoration(labelText: 'Folder'),
+          decoration: const InputDecoration(
+            labelText: 'Folder from root',
+            helperText: 'Example: telecom/msg/inbox',
+          ),
         ),
         const SizedBox(height: 12),
         _paginationFields(messages: true),
