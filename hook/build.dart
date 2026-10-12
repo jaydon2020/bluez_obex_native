@@ -24,10 +24,7 @@ void main(List<String> args) async {
       return;
     }
 
-    validateNativeTarget(
-      input.config.code.targetOS,
-      input.config.code.targetArchitecture,
-    );
+    validateOperatingSystems(OS.current, input.config.code.targetOS);
 
     final packageRoot = input.packageRoot.toFilePath();
     final nativeRoot = '${packageRoot}native';
@@ -111,15 +108,11 @@ Future<bool> _which(String executable) async {
   return result.exitCode == 0;
 }
 
-/// This hook currently supports native Linux builds only.
-void validateNativeTarget(OS targetOS, Architecture targetArchitecture) {
-  if (OS.current != OS.linux ||
-      targetOS != OS.linux ||
-      targetArchitecture != Architecture.current) {
+/// This hook requires Linux on both the build host and target.
+void validateOperatingSystems(OS hostOS, OS targetOS) {
+  if (hostOS != OS.linux || targetOS != OS.linux) {
     throw UnsupportedError(
-      'bluez_obex_native requires a native Linux build '
-      'for $targetArchitecture; host is ${OS.current}/${Architecture.current}. '
-      'Cross-compilation is not configured.',
+      'bluez_obex_native requires a Linux host and target.',
     );
   }
 }

@@ -11,20 +11,22 @@ import 'package:test/test.dart';
 import '../hook/build.dart' as hook;
 
 void main() {
-  test('rejects foreign architecture before building a host library', () {
-    final foreign = Architecture.values.firstWhere(
-      (a) => a != Architecture.current,
-    );
+  test('accepts a Linux host and target', () {
     expect(
-      () => hook.validateNativeTarget(OS.linux, foreign),
+      () => hook.validateOperatingSystems(OS.linux, OS.linux),
+      returnsNormally,
+    );
+  });
+
+  test('rejects a non-Linux host or target', () {
+    expect(
+      () => hook.validateOperatingSystems(OS.windows, OS.linux),
       throwsUnsupportedError,
     );
     expect(
-      () => hook.validateNativeTarget(OS.windows, Architecture.current),
+      () => hook.validateOperatingSystems(OS.linux, OS.windows),
       throwsUnsupportedError,
     );
-    if (Platform.isLinux)
-      hook.validateNativeTarget(OS.linux, Architecture.current);
   });
 
   test('tracks vendor sources and CMake inputs for hook invalidation', () {
