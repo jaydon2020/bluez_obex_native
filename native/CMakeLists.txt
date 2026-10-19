@@ -2,6 +2,21 @@ cmake_minimum_required(VERSION 3.10)
 project(bluez_obex_native_library VERSION 0.0.1 LANGUAGES C CXX)
 
 option(BLUEZ_HOOK_BUILD "Build is driven by the Dart native-assets hook" OFF)
+option(BLUEZ_REQUIRE_CROSS_COMPILE
+  "Fail unless configured by a cross-compiling toolchain with a sysroot" OFF)
+
+if(BLUEZ_REQUIRE_CROSS_COMPILE)
+  if(NOT CMAKE_CROSSCOMPILING)
+    message(FATAL_ERROR
+      "BLUEZ_REQUIRE_CROSS_COMPILE rejects a host compiler")
+  endif()
+  if(NOT CMAKE_SYSROOT)
+    message(FATAL_ERROR "The target toolchain must define CMAKE_SYSROOT")
+  endif()
+  if(BUILD_TESTING)
+    message(FATAL_ERROR "Target binaries must not run during a cross-build")
+  endif()
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)

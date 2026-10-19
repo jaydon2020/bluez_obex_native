@@ -19,12 +19,35 @@ void main(List<String> args) async {
   await build(args, (input, output) async {
     if (!input.config.buildCodeAssets) return;
 
-    if (Platform.environment.containsKey('SKIP_NATIVE_BUILD')) {
-      stderr.writeln('SKIP_NATIVE_BUILD set — skipping native build.');
+    final skipNativeBuild = input.userDefines['skip_native_build'];
+    if (skipNativeBuild is! bool?) {
+      throw const FormatException(
+        'hooks.user_defines.bluez_obex_native.skip_native_build must be a bool',
+      );
+    }
+    if (skipNativeBuild == true ||
+        Platform.environment.containsKey('SKIP_NATIVE_BUILD')) {
+      stderr.writeln('Native build disabled — skipping CMake.');
       return;
     }
 
-    validateOperatingSystems(OS.current, input.config.code.targetOS);
+    final codeConfig = input.config.code;
+    final toolchainUri = input.userDefines.path('cmake_toolchain_file');
+    validateBuildTarget(
+      OS.current,
+      codeConfig.targetOS,
+      Architecture.current,
+      codeConfig.targetArchitecture,
+      hasToolchain: toolchainUri != null,
+    );
+
+    if (toolchainUri != null) {
+      final toolchain = File.fromUri(toolchainUri);
+      if (!toolchain.existsSync()) {
+        throw StateError('CMake toolchain file not found: ${toolchain.path}');
+      }
+      output.dependencies.add(toolchain.uri);
+    }
 
     final packageRoot = input.packageRoot.toFilePath();
     final nativeRoot = '${packageRoot}native';
@@ -51,18 +74,17 @@ void main(List<String> args) async {
       ]);
     }
 
-    if (!File('${buildDir}CMakeCache.txt').existsSync()) {
-      await _run('cmake', [
-        '-S',
-        nativeRoot,
-        '-B',
-        buildDir,
-        '-DCMAKE_BUILD_TYPE=Release',
-        '-DBUILD_TESTING=OFF',
-        '-DBLUEZ_HOOK_BUILD=ON',
-        if (await _which('ninja')) ...['-G', 'Ninja'],
-      ]);
-    }
+    await _run(
+      'cmake',
+      cmakeConfigureArguments(
+        nativeRoot: nativeRoot,
+        buildDirectory: buildDir,
+        hostArchitecture: Architecture.current,
+        targetArchitecture: codeConfig.targetArchitecture,
+        toolchainUri: toolchainUri,
+        hasNinja: await _which('ninja'),
+      ),
+    );
 
     await _run('cmake', ['--build', buildDir, '--parallel']);
 
@@ -108,14 +130,48 @@ Future<bool> _which(String executable) async {
   return result.exitCode == 0;
 }
 
-/// This hook requires Linux on both the build host and target.
-void validateOperatingSystems(OS hostOS, OS targetOS) {
+void validateBuildTarget(
+  OS hostOS,
+  OS targetOS,
+  Architecture hostArchitecture,
+  Architecture targetArchitecture, {
+  required bool hasToolchain,
+}) {
   if (hostOS != OS.linux || targetOS != OS.linux) {
     throw UnsupportedError(
       'bluez_obex_native requires a Linux host and target.',
     );
   }
+  if (hostArchitecture != targetArchitecture && !hasToolchain) {
+    throw UnsupportedError(
+      'Cross-compiling bluez_obex_native from $hostArchitecture to '
+      '$targetArchitecture requires '
+      'hooks.user_defines.bluez_obex_native.cmake_toolchain_file.',
+    );
+  }
 }
+
+List<String> cmakeConfigureArguments({
+  required String nativeRoot,
+  required String buildDirectory,
+  required Architecture hostArchitecture,
+  required Architecture targetArchitecture,
+  required Uri? toolchainUri,
+  required bool hasNinja,
+}) => [
+  '-S',
+  nativeRoot,
+  '-B',
+  buildDirectory,
+  '-DCMAKE_BUILD_TYPE=Release',
+  '-DBUILD_TESTING=OFF',
+  '-DBLUEZ_HOOK_BUILD=ON',
+  if (toolchainUri != null)
+    '-DCMAKE_TOOLCHAIN_FILE=${File.fromUri(toolchainUri).path}',
+  if (hostArchitecture != targetArchitecture)
+    '-DBLUEZ_REQUIRE_CROSS_COMPILE=ON',
+  if (hasNinja) ...['-G', 'Ninja'],
+];
 
 Iterable<Uri> nativeDependencies(Directory nativeRoot) sync* {
   yield nativeRoot.uri.resolve('CMakeLists.txt');

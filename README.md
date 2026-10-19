@@ -61,9 +61,24 @@ This template uses the following structure:
 `hook/build.dart` drives CMake and declares `libbluez_obex_native.so` as a
 bundled CodeAsset. Dart and Flutter consumers therefore build and package the
 native library automatically. The hook requires a Linux host and Linux target.
-For cross-compilation, provide a target compiler and sysroot through the build
-environment. Set `SKIP_NATIVE_BUILD` to skip the hook or
-`BLUEZ_OBEX_LIB` to load a specific prebuilt library during development.
+For cross-architecture builds, provide a CMake toolchain file through the root
+application's `pubspec.yaml`:
+
+```yaml
+hooks:
+  user_defines:
+    bluez_obex_native:
+      cmake_toolchain_file: /path/to/agl-toolchain.cmake
+```
+
+The toolchain must select the target C/C++ compilers and define
+`CMAKE_SYSROOT`; the hook refuses to label a host build as a foreign target.
+Native Assets runs hooks in a semi-hermetic environment, so Yocto must use this
+user-define rather than relying on `CC`, `CXX`, or `SDKTARGETSYSROOT` being
+visible inside the hook. A recipe that builds and injects the library itself can
+set `skip_native_build: true` in the same section. `SKIP_NATIVE_BUILD` remains
+available for direct/legacy hook execution, and `BLUEZ_OBEX_LIB` loads a
+specific prebuilt library during development.
 
 ## Binding to native code
 
