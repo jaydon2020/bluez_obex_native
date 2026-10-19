@@ -67,4 +67,25 @@ ${XML2CPP} --verbose --proxy=native/generated/message_access1_proxy.h \
 ${XML2CPP} --verbose --proxy=native/generated/message1_proxy.h \
     interfaces/org.bluez.obex.Message1.xml
 
+add_license_header() {
+    local file="$1"
+    local temporary
+    temporary="$(mktemp "${file}.tmp.XXXXXX")"
+    chmod --reference="${file}" "${temporary}"
+    {
+        printf '%s\n' '/*'
+        printf '%s\n' ' * Copyright (c) 2026 Jian De jiande2020@gmail.com. All rights reserved.'
+        printf '%s\n' ' *'
+        printf '%s\n' ' * Use of this source code is governed by a BSD-style license that can be'
+        printf '%s\n' ' * found in the LICENSE file.'
+        printf '%s\n\n' ' */'
+        sed '/./,$!d' "${file}"
+    } >"${temporary}"
+    mv "${temporary}" "${file}"
+}
+
+for proxy in native/generated/*_proxy.h; do
+    add_license_header "${proxy}"
+done
+
 echo "Proxy generation complete."
