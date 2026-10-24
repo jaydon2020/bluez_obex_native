@@ -20,6 +20,14 @@ try:
         '--packages=' + str(root / '.dart_tool/package_config.json'),
         str(root / 'test/support/native_scenarios.dart'), scenario],
         cwd=root, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if scenario == 'lifecycle_signals':
+        assert child.stdout.readline().strip() == 'signals-ready'
+        emitter = subprocess.run(
+            [sys.executable, str(root / 'test/support/emit_obex_signals.py')],
+            env=env, capture_output=True, text=True, timeout=5)
+        assert emitter.returncode == 0, emitter.stderr
+        child.stdin.write('emitted\n')
+        child.stdin.flush()
     if scenario in ('disconnect', 'restart'):
         assert child.stdout.readline().strip() == 'connected'
         if scenario == 'disconnect':

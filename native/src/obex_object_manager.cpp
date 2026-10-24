@@ -24,6 +24,76 @@ bool is_obex_interface(const std::string &interface_name) {
          interface_name == kMessageAccessIface ||
          interface_name == kMessageIface;
 }
+
+bool is_string_property(const std::string &interface_name,
+                        const std::string &name) {
+  if (interface_name == kSessionIface)
+    return name == "Source" || name == "Destination" || name == "Target" ||
+           name == "Root";
+  if (interface_name == kTransferIface)
+    return name == "Status" || name == "Name" || name == "Type" ||
+           name == "Filename";
+  if (interface_name == kPhonebookIface)
+    return name == "Folder" || name == "DatabaseIdentifier" ||
+           name == "PrimaryCounter" || name == "SecondaryCounter";
+  if (interface_name == kMessageIface)
+    return name == "Folder" || name == "Subject" || name == "Timestamp" ||
+           name == "Sender" || name == "SenderAddress" || name == "ReplyTo" ||
+           name == "Recipient" || name == "RecipientAddress" ||
+           name == "Type" || name == "Status" || name == "DeliveryStatus" ||
+           name == "ConversationName" || name == "Direction" ||
+           name == "AttachmentMimeTypes";
+  return false;
+}
+
+bool is_bool_property(const std::string &interface_name,
+                      const std::string &name) {
+  if (interface_name == kPhonebookIface)
+    return name == "FixedImageSize";
+  if (interface_name == kMessageIface)
+    return name == "Text" || name == "Priority" || name == "Read" ||
+           name == "Deleted" || name == "Sent" || name == "Protected";
+  return false;
+}
+
+bool is_known_property(const std::string &interface_name,
+                       const std::string &name) {
+  if (is_string_property(interface_name, name) ||
+      is_bool_property(interface_name, name))
+    return true;
+  if (interface_name == kSessionIface)
+    return name == "Channel" || name == "PSM";
+  if (interface_name == kTransferIface)
+    return name == "Session" || name == "Time" || name == "Size" ||
+           name == "Transferred";
+  if (interface_name == kMessageIface)
+    return name == "Size" || name == "AttachmentSize" ||
+           name == "ConversationId";
+  return interface_name == kMessageAccessIface && name == "SupportedTypes";
+}
+
+bool has_expected_type(const std::string &interface_name,
+                       const std::string &name, const sdbus::Variant &value) {
+  if (is_string_property(interface_name, name))
+    return value.containsValueOfType<std::string>();
+  if (is_bool_property(interface_name, name))
+    return value.containsValueOfType<bool>();
+  if (interface_name == kSessionIface && name == "Channel")
+    return value.containsValueOfType<uint8_t>();
+  if (interface_name == kSessionIface && name == "PSM")
+    return value.containsValueOfType<uint16_t>();
+  if (interface_name == kTransferIface && name == "Session")
+    return value.containsValueOfType<sdbus::ObjectPath>();
+  if ((interface_name == kTransferIface &&
+       (name == "Time" || name == "Size" || name == "Transferred")) ||
+      (interface_name == kMessageIface &&
+       (name == "Size" || name == "AttachmentSize" ||
+        name == "ConversationId")))
+    return value.containsValueOfType<uint64_t>();
+  if (interface_name == kMessageAccessIface && name == "SupportedTypes")
+    return value.containsValueOfType<std::vector<std::string>>();
+  return false;
+}
 } // namespace
 
 ObexObjectManager::ObexObjectManager(sdbus::IConnection &conn,
@@ -45,17 +115,29 @@ ObexObjectManager::ObexObjectManager(sdbus::IConnection &conn,
   root_proxy_ = sdbus::createProxy(conn_, sdbus::ServiceName{kObexService},
                                    sdbus::ObjectPath{kObexRootPath});
 
-  root_proxy_->uponSignal("InterfacesAdded")
-      .onInterface(kObjectManagerIface)
-      .call([this](const sdbus::ObjectPath &object_path,
-                   const InterfacesMap &interfaces) {
+  root_proxy_->registerSignalHandler(
+      sdbus::InterfaceName{kObjectManagerIface},
+      sdbus::SignalName{"InterfacesAdded"}, [this](sdbus::Signal signal) {
+        sdbus::ObjectPath object_path;
+        InterfacesMap interfaces;
+        try {
+          signal >> object_path >> interfaces;
+        } catch (const sdbus::Error &) {
+          return;
+        }
         on_interfaces_added(object_path, interfaces);
       });
 
-  root_proxy_->uponSignal("InterfacesRemoved")
-      .onInterface(kObjectManagerIface)
-      .call([this](const sdbus::ObjectPath &object_path,
-                   const std::vector<std::string> &interfaces) {
+  root_proxy_->registerSignalHandler(
+      sdbus::InterfaceName{kObjectManagerIface},
+      sdbus::SignalName{"InterfacesRemoved"}, [this](sdbus::Signal signal) {
+        sdbus::ObjectPath object_path;
+        std::vector<std::string> interfaces;
+        try {
+          signal >> object_path >> interfaces;
+        } catch (const sdbus::Error &) {
+          return;
+        }
         on_interfaces_removed(object_path, interfaces);
       });
 }
@@ -89,11 +171,14 @@ void ObexObjectManager::on_interfaces_added(
     if (!is_obex_interface(interface_name)) {
       continue;
     }
+    bool inserted = false;
     {
       std::scoped_lock lock(mutex_);
+      inserted = !interfaces_by_path_[path].contains(interface_name);
       interfaces_by_path_[path][interface_name] = properties;
     }
-    post_added(path, interface_name);
+    if (inserted)
+      post_added(path, interface_name);
     should_subscribe = true;
     post_properties(path, interface_name, &properties);
   }
@@ -114,17 +199,20 @@ void ObexObjectManager::on_interfaces_removed(
     if (!is_obex_interface(interface_name)) {
       continue;
     }
-    post_removed(path, interface_name);
-
-    std::scoped_lock lock(mutex_);
-    if (auto known = interfaces_by_path_.find(path);
-        known != interfaces_by_path_.end()) {
-      known->second.erase(interface_name);
-      if (known->second.empty()) {
-        interfaces_by_path_.erase(known);
-        property_proxies_.erase(path);
+    bool removed = false;
+    {
+      std::scoped_lock lock(mutex_);
+      if (auto known = interfaces_by_path_.find(path);
+          known != interfaces_by_path_.end()) {
+        removed = known->second.erase(interface_name) != 0;
+        if (known->second.empty()) {
+          interfaces_by_path_.erase(known);
+          property_proxies_.erase(path);
+        }
       }
     }
+    if (removed)
+      post_removed(path, interface_name);
   }
 }
 
@@ -136,15 +224,23 @@ void ObexObjectManager::subscribe_properties(const std::string &object_path) {
 
   auto proxy = sdbus::createProxy(conn_, sdbus::ServiceName{kObexService},
                                   sdbus::ObjectPath{object_path});
-  proxy->uponSignal("PropertiesChanged")
-      .onInterface(kPropertiesIface)
-      .call([this,
-             object_path](const std::string &interface_name,
-                          const std::map<std::string, sdbus::Variant> &changed,
-                          const std::vector<std::string> &invalidated) {
+  proxy->registerSignalHandler(
+      sdbus::InterfaceName{kPropertiesIface},
+      sdbus::SignalName{"PropertiesChanged"},
+      [this, object_path](sdbus::Signal signal) {
+        std::string interface_name;
+        PropertiesMap changed;
+        std::vector<std::string> invalidated;
+        try {
+          signal >> interface_name >> changed >> invalidated;
+        } catch (const sdbus::Error &) {
+          return;
+        }
         if (failed() || !is_obex_interface(interface_name))
           return;
         PropertiesMap snapshot;
+        std::vector<std::string> relevant_invalidated;
+        bool changed_cache = false;
         {
           std::scoped_lock lock(mutex_);
           auto known = interfaces_by_path_.find(object_path);
@@ -152,16 +248,27 @@ void ObexObjectManager::subscribe_properties(const std::string &object_path) {
               !known->second.contains(interface_name))
             return;
           auto &cached = known->second.at(interface_name);
-          for (const auto &[key, value] : changed)
-            cached[key] = value;
-          for (const auto &key : invalidated)
-            cached.erase(key);
+          for (const auto &[key, value] : changed) {
+            if (has_expected_type(interface_name, key, value)) {
+              cached[key] = value;
+              changed_cache = true;
+            }
+          }
+          for (const auto &key : invalidated) {
+            if (is_known_property(interface_name, key)) {
+              cached.erase(key);
+              relevant_invalidated.push_back(key);
+              changed_cache = true;
+            }
+          }
+          if (!changed_cache)
+            return;
           snapshot = cached;
         }
         // Publish the signal's state before any round trip: the object may
         // already be gone by the time a property request reaches the service.
         post_properties(object_path, interface_name, &snapshot);
-        for (const auto &key : invalidated) {
+        for (const auto &key : relevant_invalidated) {
           try {
             auto proxy =
                 sdbus::createProxy(conn_, sdbus::ServiceName{kObexService},

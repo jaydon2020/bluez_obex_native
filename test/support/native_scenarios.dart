@@ -141,6 +141,76 @@ Future<void> main(List<String> args) async {
           'Failed to list inbox after changing the working folder',
         );
       }
+    } else if (args.single == 'lifecycle_signals') {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      events.clear();
+      print('signals-ready');
+      await stdin.first;
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      final statuses = events
+          .where((event) => event.payload is BlueZObexTransferProps)
+          .map((event) => event.payload! as BlueZObexTransferProps)
+          .where(
+            (props) =>
+                props.objectPath == '/org/bluez/obex/client/session0/transfer0',
+          )
+          .map((props) => props.status)
+          .toList();
+      check(
+        statuses.join(',') == 'active,queued,complete',
+        'Malformed, wrong-type, foreign, or stale signal escaped: $statuses',
+      );
+      check(
+        events.where((e) => e.type == BlueZObexEventType.objectAdded).length ==
+            1,
+        'Duplicate interface addition escaped',
+      );
+      check(
+        events
+                .where((e) => e.type == BlueZObexEventType.objectRemoved)
+                .length ==
+            1,
+        'Duplicate interface removal escaped',
+      );
+      check(
+        !events.any((e) => e.type == BlueZObexEventType.error),
+        'Malformed signal terminated the native stream',
+      );
+      await client.getManagedObjects();
+    } else if (args.single == 'mixed_close') {
+      var completions = 0;
+      Future<T> counted<T>(Future<T> future) => future.then((value) {
+        completions++;
+        return value;
+      });
+
+      final transfer = client.transfer(
+        '/org/bluez/obex/client/session0/transfer0',
+      );
+      final operations = <Future<Object?>>[
+        counted(
+          client.session('/org/bluez/obex/client/session0').capabilities(),
+        ),
+        counted(client.phonebook('/org/bluez/obex/client/session0').getSize()),
+        counted(
+          client.messageAccess('/org/bluez/obex/client/session0').updateInbox(),
+        ),
+        counted(transfer.suspend()),
+        counted(transfer.resume()),
+      ];
+      final close = client.dispose();
+      final results = await Future.wait(operations);
+      await close;
+      check(
+        results[0] == 'capabilities:1',
+        'Session Future completed incorrectly',
+      );
+      check(results[1] == 42, 'PBAP Future completed incorrectly');
+      check(
+        completions == operations.length,
+        'A pending Future completed more than once',
+      );
     } else {
       throw ArgumentError('Unknown scenario: ${args.single}');
     }

@@ -18,6 +18,8 @@ void main() {
     'large_result',
     'folder_failure',
     'map_navigation',
+    'lifecycle_signals',
+    'mixed_close',
     'restart',
   ]) {
     test('native private bus: $scenario', () async {
