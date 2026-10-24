@@ -6,11 +6,45 @@
  */
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:code_assets/code_assets.dart';
 import 'package:test/test.dart';
 import '../hook/build.dart' as hook;
 
 void main() {
+  Uint8List elf(int elfClass, int machine) {
+    final header = Uint8List(64);
+    header.setAll(0, [0x7f, 0x45, 0x4c, 0x46, elfClass, 1, 1]);
+    ByteData.sublistView(header)
+      ..setUint16(16, 3, Endian.little)
+      ..setUint16(18, machine, Endian.little);
+    return header;
+  }
+
+  test('checks the artifact architecture, not the toolchain label', () {
+    final host = elf(2, 62);
+    hook.validateElfHeader(host, Architecture.x64);
+    expect(
+      () => hook.validateElfHeader(host, Architecture.arm64),
+      throwsStateError,
+    );
+    hook.validateElfHeader(elf(2, 183), Architecture.arm64);
+    hook.validateElfHeader(elf(1, 40), Architecture.arm);
+    expect(
+      () => hook.validateElfHeader(elf(2, 40), Architecture.arm),
+      throwsStateError,
+    );
+    expect(
+      () => hook.validateElfHeader(Uint8List(8), Architecture.x64),
+      throwsStateError,
+    );
+    final executable = elf(2, 62);
+    ByteData.sublistView(executable).setUint16(16, 2, Endian.little);
+    expect(
+      () => hook.validateElfHeader(executable, Architecture.x64),
+      throwsStateError,
+    );
+  });
   test('accepts a native Linux build', () {
     expect(
       () => hook.validateBuildTarget(

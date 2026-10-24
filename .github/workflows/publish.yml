@@ -9,18 +9,28 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   publish:
     name: Publish
+    needs: verify
     runs-on: ubuntu-24.04
     permissions:
       id-token: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable }
-      - run: flutter pub get
-      - run: flutter analyze --fatal-infos
+      - uses: dart-lang/setup-dart@v1
+      - name: Check tag matches the package version
+        shell: bash
+        run: |
+          version=$(sed -n 's/^version: //p' pubspec.yaml)
+          test "${GITHUB_REF_NAME}" = "v${version}"
+      - run: dart pub get
       - run: dart pub publish --dry-run
       - run: dart pub publish --force

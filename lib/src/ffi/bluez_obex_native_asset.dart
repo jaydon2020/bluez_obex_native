@@ -5,9 +5,7 @@
  * found in the LICENSE file.
  */
 
-// Asset-id anchor for the native build hook.
-//
-// `hook/build.dart` emits libbluez_obex_native.so as a CodeAsset whose name
-// points at this file. The bindings currently load it through
-// `lib/src/internal/library_loader.dart`.
-library;
+import 'dart:ffi';
+
+@Native<Void Function(Pointer<Void>)>(symbol: 'bluez_obex_init')
+external void bundledObexInit(Pointer<Void> data);

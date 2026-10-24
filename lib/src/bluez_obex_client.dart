@@ -1127,11 +1127,13 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
 
   @override
   Future<List<BlueZDevice>> getDevices() async {
+    _checkOpen();
     return simulatedDevices;
   }
 
   @override
   Future<BlueZObexManagedObjects> getManagedObjects() async {
+    _checkOpen();
     return BlueZObexManagedObjects(
       sessions: _sessions.keys.toList(),
       transfers: _transfers.keys.toList(),
@@ -1146,9 +1148,12 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
     String destination, {
     String target = 'pbap',
   }) async {
+    _checkOpen();
     if (target.isEmpty) {
       throw ArgumentError.value(target, 'target', 'Must not be empty');
     }
+    validateNativeString(destination);
+    validateNativeString(target);
     final index = _sessionCounter++;
     final path = '/org/bluez/obex/client/session$index';
     final props = BlueZObexSessionProps(
@@ -1216,6 +1221,7 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
 
   @override
   Future<void> removeSession(String sessionPath) async {
+    _checkOpen();
     final removedTransfers = _transfers.values
         .where((transfer) => transfer.session == sessionPath)
         .map((transfer) => transfer.objectPath)
@@ -1485,7 +1491,8 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
       return Future.value();
     }
     _disposed = true;
-    return _eventsController.close();
+    unawaited(_eventsController.close());
+    return Future.value();
   }
 
   BlueZObexTransferResult _completeTransfer(
@@ -1562,13 +1569,18 @@ class SimulatedBlueZObexBackend implements BlueZObexBackend {
       ),
     );
   }
-}
 
-T _require<T>(T? value, String path) {
-  if (value == null) {
-    throw BlueZObexNativeException(path, -404);
+  void _checkOpen() {
+    if (_disposed) throw StateError('OBEX client is disposed');
   }
-  return value;
+
+  T _require<T>(T? value, String path) {
+    _checkOpen();
+    if (value == null) {
+      throw BlueZObexNativeException(path, -404);
+    }
+    return value;
+  }
 }
 
 List<T> _applyMaxCount<T>(List<T> values, Map<String, Object?> filters) {

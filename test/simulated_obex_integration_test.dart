@@ -27,6 +27,31 @@ void main() {
       }
     });
 
+    test('disposes without waiting for a paused event listener', () async {
+      final sub = client.events.listen((_) {});
+      sub.pause();
+      try {
+        await client.dispose().timeout(const Duration(seconds: 1));
+        await client.dispose().timeout(const Duration(seconds: 1));
+      } finally {
+        await sub.cancel();
+      }
+    });
+
+    test('rejects calls after disposal before changing files', () async {
+      final session = await client.createSession('AA:BB:CC:DD:EE:FF');
+      final file = File('${tempDir.path}/protected.vcf');
+      await file.writeAsString('original');
+      await client.dispose();
+      await expectLater(session.phonebook.pullAll(file.path), throwsStateError);
+      await expectLater(client.getManagedObjects(), throwsStateError);
+      await expectLater(
+        client.createSession('AA:BB:CC:DD:EE:FF'),
+        throwsStateError,
+      );
+      expect(await file.readAsString(), 'original');
+    });
+
     test('connects, creates a session, and syncs contacts to vCard', () async {
       final session = await client.createSession(
         'AA:BB:CC:DD:EE:FF',

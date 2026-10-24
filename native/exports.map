@@ -1,0 +1,4 @@
+{
+  global: bluez_obex_*;
+  local: *;
+};

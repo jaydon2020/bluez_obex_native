@@ -11,6 +11,7 @@
 // LICENSES/Apache-2.0.txt.
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:code_assets/code_assets.dart';
 import 'package:hooks/hooks.dart';
@@ -92,6 +93,12 @@ void main(List<String> args) async {
     if (!library.existsSync()) {
       throw StateError('libbluez_obex_native.so not found at ${library.path}');
     }
+    final file = await library.open();
+    try {
+      validateElfHeader(await file.read(64), codeConfig.targetArchitecture);
+    } finally {
+      await file.close();
+    }
 
     output.assets.code.add(
       CodeAsset(
@@ -106,6 +113,38 @@ void main(List<String> args) async {
 
     stderr.writeln('libbluez_obex_native built: ${library.path}');
   });
+}
+
+void validateElfHeader(Uint8List header, Architecture architecture) {
+  final (elfClass, machine) = switch (architecture) {
+    Architecture.arm => (1, 40),
+    Architecture.arm64 => (2, 183),
+    Architecture.ia32 => (1, 3),
+    Architecture.x64 => (2, 62),
+    Architecture.riscv32 => (1, 243),
+    Architecture.riscv64 => (2, 243),
+    _ => throw UnsupportedError(
+      'Unsupported Linux architecture: $architecture',
+    ),
+  };
+  if (header.length < 52 ||
+      header[0] != 0x7f ||
+      header[1] != 0x45 ||
+      header[2] != 0x4c ||
+      header[3] != 0x46 ||
+      header[4] != elfClass ||
+      header[5] != 1 ||
+      header[6] != 1 ||
+      (elfClass == 2 && header.length < 64)) {
+    throw StateError(
+      'Native library is not a valid little-endian $architecture ELF',
+    );
+  }
+  final data = ByteData.sublistView(header);
+  if (data.getUint16(16, Endian.little) != 3 ||
+      data.getUint16(18, Endian.little) != machine) {
+    throw StateError('Native library does not match Linux $architecture');
+  }
 }
 
 Future<void> _run(String executable, List<String> arguments) async {
@@ -175,6 +214,7 @@ List<String> cmakeConfigureArguments({
 
 Iterable<Uri> nativeDependencies(Directory nativeRoot) sync* {
   yield nativeRoot.uri.resolve('CMakeLists.txt');
+  yield nativeRoot.uri.resolve('exports.map');
   for (final name in [
     'src',
     'include',

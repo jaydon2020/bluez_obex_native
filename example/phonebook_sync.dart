@@ -10,6 +10,7 @@
 import 'dart:io';
 
 import 'obex_example_utils.dart';
+import 'package:bluez_obex_native/src/internal/transfer_completion.dart';
 
 Future<void> main(List<String> args) async {
   if (hasFlag(args, '--help') || hasFlag(args, '-h')) {
@@ -67,18 +68,18 @@ Future<void> main(List<String> args) async {
       print('  ${entry.name}');
     }
 
-    final targetFile = 'contacts.vcf';
+    final targetFile = File('contacts.vcf').absolute.path;
     print('Pulling all contacts to $targetFile...');
-    final transfer = await session.phonebook.pullAll(
-      targetFile,
-      filters: filters,
+    final transfer = await waitForTransfer(
+      client,
+      () => session.phonebook.pullAll(targetFile, filters: filters),
     );
-    print('Transfer started: ${transfer.transferPath}');
+    print('Transfer complete: ${transfer.transferPath}');
 
-    // Basic file existence check
-    if (File(targetFile).existsSync()) {
-      print('Contacts downloaded to $targetFile');
+    if (!File(targetFile).existsSync()) {
+      throw StateError('Completed transfer file is missing: $targetFile');
     }
+    print('Contacts downloaded to $targetFile');
   } finally {
     print('Closing client...');
     await client.dispose();

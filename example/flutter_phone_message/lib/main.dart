@@ -13,6 +13,10 @@ import 'dart:typed_data';
 import 'package:bluez_obex_native/bluez_obex_native.dart';
 import 'package:flutter/material.dart';
 
+// Repository examples share completion tracking without expanding the public API.
+// ignore: implementation_imports
+import 'package:bluez_obex_native/src/internal/transfer_completion.dart';
+
 const _pbapUuid = '0000112f-0000-1000-8000-00805f9b34fb';
 const _mapUuid = '00001132-0000-1000-8000-00805f9b34fb';
 
@@ -103,7 +107,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
 
   final _activity = <_ActivityEntry>[];
   final _transfers = <String, BlueZObexTransferProps>{};
-  final _transferWatchers = <_TransferWatcher>{};
+  final _transferWatchers = <TransferCompletion>{};
   final _contactFiles = <String, String>{};
   final _deletedMessages = <String>{};
 
@@ -212,7 +216,7 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     StreamSubscription<BlueZObexEvent>? subscription,
     BlueZObexClient? client,
     Directory? workspace,
-    List<_TransferWatcher> watchers,
+    List<TransferCompletion> watchers,
     List<BlueZObexSession> sessions,
   ) async {
     for (final watcher in watchers) {
@@ -746,64 +750,16 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
     Future<BlueZObexTransferResult> Function() start,
   ) async {
     final client = await _ensureClient();
-    final watcher = _TransferWatcher();
-    String? transferPath;
-    final completed = <String>{};
-    final removed = <String>{};
-    final failures = <String, String>{};
-
-    watcher.subscription = client.events.listen(
-      (event) {
-        final payload = event.payload;
-        if (event.type == BlueZObexEventType.transfer &&
-            payload is BlueZObexTransferProps) {
-          final props = payload;
-          if (props.status == 'complete') {
-            completed.add(props.objectPath);
-            if (props.objectPath == transferPath) watcher.complete();
-          } else if (_isFailedStatus(props.status)) {
-            failures[props.objectPath] = props.status;
-            if (props.objectPath == transferPath) {
-              watcher.fail(StateError('Transfer ${props.status}'));
-            }
-          }
-        } else if (event.type == BlueZObexEventType.objectRemoved &&
-            payload is BlueZObexObjectRemoved &&
-            payload.interfaceName == 'org.bluez.obex.Transfer1') {
-          final object = payload;
-          removed.add(object.objectPath);
-          if (object.objectPath == transferPath) watcher.complete();
-        }
-      },
-      onError: (Object error, StackTrace stackTrace) => watcher.fail(error),
-      onDone: () => watcher.fail(StateError('Event stream closed')),
-    );
+    final watcher = TransferCompletion(client.events);
     _transferWatchers.add(watcher);
 
     try {
-      final result = await start();
-      transferPath = result.transferPath;
-      _rememberTransferResult(result);
-      final status = _resultProperty(result, 'Status');
-      if (status == 'complete') return result;
-      if (_isFailedStatus(status)) throw StateError('Transfer $status');
-      if (failures[transferPath] case final failed?) {
-        throw StateError('Transfer $failed');
-      }
-      if (completed.contains(transferPath) || removed.contains(transferPath)) {
-        return result;
-      }
-      await watcher.completer.future.timeout(const Duration(minutes: 2));
-      if (watcher.error case final error?) throw error;
-      return result;
+      return await watcher.wait(start, onStarted: _rememberTransferResult);
     } finally {
       _transferWatchers.remove(watcher);
       await watcher.close();
     }
   }
-
-  bool _isFailedStatus(String? status) =>
-      status == 'error' || status == 'failed' || status == 'cancelled';
 
   String? _resultProperty(BlueZObexTransferResult result, String key) {
     for (final property in result.properties) {
@@ -2014,33 +1970,6 @@ class _PhoneMessageHomeState extends State<PhoneMessageHome> {
       '${time.hour.toString().padLeft(2, '0')}:'
       '${time.minute.toString().padLeft(2, '0')}:'
       '${time.second.toString().padLeft(2, '0')}';
-}
-
-class _TransferWatcher {
-  final completer = Completer<void>();
-  late final StreamSubscription<BlueZObexEvent> subscription;
-  Object? error;
-  bool _closed = false;
-
-  void complete() {
-    if (!completer.isCompleted) completer.complete();
-  }
-
-  void fail(Object error) {
-    this.error = error;
-    complete();
-  }
-
-  Future<void> abort() async {
-    fail(StateError('Transfer listener closed'));
-    await close();
-  }
-
-  Future<void> close() async {
-    if (_closed) return;
-    _closed = true;
-    await subscription.cancel();
-  }
 }
 
 class _Destination {

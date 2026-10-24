@@ -88,11 +88,19 @@ class NativeBlueZObexBackend implements BlueZObexBackend {
     }
   }
 
-  Future<T> _call<T>(String operation, List<Object?> arguments) {
+  Future<T> _call<T>(String operation, List<Object?> arguments) async {
     if (_disposeFuture != null || _exited.isCompleted) {
       return Future.error(StateError('OBEX client is disposed'));
     }
-    return _request<T>(operation, arguments);
+    return _request<T>(operation, [
+      for (final argument in arguments)
+        if (argument is String)
+          validateNativeString(argument)
+        else if (argument is Map<String, Object?>)
+          nativeStringMapValues(argument)
+        else
+          argument,
+    ]);
   }
 
   Future<T> _request<T>(String operation, List<Object?> arguments) async {

@@ -11,21 +11,17 @@ An explicitly empty target is rejected.
 
 ```dart
 final client = await BlueZObexClient.connect();
-final session = await client.createSession(
-  'AA:BB:CC:DD:EE:FF',
-  target: 'pbap',
-);
-
-await session.phonebook.select('int', 'pb');
-final entries = await session.phonebook.list(filters: {'MaxCount': 50});
-final transfer = await session.phonebook.pullAll('/tmp/contacts.vcf');
-
-final ada = await session.phonebook.pull('1.vcf', '/tmp/ada.vcf');
-final activeTransfer = client.transfer(ada.transferPath);
-await activeTransfer.suspend();
-await activeTransfer.resume();
-
-await client.dispose();
+try {
+  final session = await client.createSession(
+    'AA:BB:CC:DD:EE:FF',
+    target: 'pbap',
+  );
+  await session.phonebook.select('int', 'pb');
+  final entries = await session.phonebook.list(filters: {'MaxCount': 50});
+  print(entries.map((entry) => entry.name).join('\n'));
+} finally {
+  await client.dispose();
+}
 ```
 
 The Dart API exposes every method and property in the bundled current BlueZ
@@ -35,6 +31,26 @@ are delivered through `client.events`. Bus disconnection or an OBEX service
 restart emits an error and `streamDone`, then closes the stream. Discard the
 old object proxies, dispose the client, and connect again to obtain fresh state.
 Always await `client.dispose()` to release its worker isolate and bus connection.
+
+`pullAll`, `pull`, `get`, and `pushMessage` return when a transfer starts.
+Subscribe to transfer events before starting the operation and wait for
+`Status == 'complete'` before reading files or disposing the client. Removal
+alone does not prove success. The [download examples](example/README.md)
+demonstrate this sequence.
+
+## Linux prerequisites
+
+Use Dart 3.10 or later (or a Flutter release containing that SDK), CMake,
+pkg-config, a C++23 compiler, and libsystemd development files. On Ubuntu 24.04:
+
+```sh
+sudo apt-get install cmake ninja-build g++ pkg-config libsystemd-dev bluez-obexd
+```
+
+BlueZ must already pair/connect the phone and the phone must grant contact or
+message access. OBEX uses the application's **session bus**; device discovery
+uses the **system bus**. Run as the desktop/application user with a reachable
+`org.bluez.obex` service. This package does not pair devices or change bus policy.
 
 For CI and local development without Bluetooth hardware, use the simulated
 endpoint:
@@ -77,8 +93,10 @@ Native Assets runs hooks in a semi-hermetic environment, so Yocto must use this
 user-define rather than relying on `CC`, `CXX`, or `SDKTARGETSYSROOT` being
 visible inside the hook. A recipe that builds and injects the library itself can
 set `skip_native_build: true` in the same section. `SKIP_NATIVE_BUILD` remains
-available for direct/legacy hook execution, and `BLUEZ_OBEX_LIB` loads a
-specific prebuilt library during development.
+available for direct/legacy hook execution. `BLUEZ_OBEX_LIB` explicitly loads a
+trusted prebuilt library during development. Normal loading uses the declared
+Native Asset; it does not search the working directory or development caches.
+The hook checks the built ELF architecture before bundling it.
 
 ## Binding to native code
 
@@ -129,9 +147,12 @@ await client.dispose();
 dart test
 dart analyze
 cmake -S native -B build/native-tests -DBUILD_TESTING=ON
-cmake --build build/native-tests --target test_obex_types -j2
+cmake --build build/native-tests -j2
 ctest --test-dir build/native-tests --output-on-failure
 ```
+
+Release verification, including the exact pub archive, an offline consumer build
+and loading a relocated bundle, is documented in [docs/verification.md](docs/verification.md).
 
 ## Flutter help
 

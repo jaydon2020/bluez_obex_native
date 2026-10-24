@@ -13,6 +13,28 @@ import 'package:bluez_obex_native/src/native_bridge.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('rejects NUL in native arguments and filter keys/values', () {
+    expect(() => NativeString('pbap\u0000map'), throwsArgumentError);
+    for (final map in <Map<String, Object?>>[
+      {'Read\u0000Deleted': true},
+      {'SearchValue': 'Ada\u0000Grace'},
+      {
+        'Fields': ['FN', 'TEL\u0000EMAIL'],
+      },
+    ]) {
+      expect(() => NativeStringMap(map), throwsArgumentError);
+    }
+    final values = NativeStringMap({
+      'Read': true,
+      'Fields': ['FN', 'TEL'],
+    });
+    try {
+      expect(values.values[0].cast<Utf8>().toDartString(), 'true');
+      expect(values.values[1].cast<Utf8>().toDartString(), 'FN,TEL');
+    } finally {
+      values.dispose();
+    }
+  });
   test('reads a sized native payload and copies ownership to Dart', () {
     var calls = 0;
     final result = readNativeBytes('fake_read', (out) {

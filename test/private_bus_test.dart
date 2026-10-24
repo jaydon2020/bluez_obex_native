@@ -19,6 +19,7 @@ void main() {
     'folder_failure',
     'map_navigation',
     'lifecycle_signals',
+    'input_validation',
     'mixed_close',
     'restart',
   ]) {
@@ -28,6 +29,9 @@ void main() {
         'import dbus; from gi.repository import GLib',
       ]);
       if (dependencies.exitCode != 0) {
+        if (Platform.environment['CI'] == 'true') {
+          fail('CI requires python-dbus and PyGObject: ${dependencies.stderr}');
+        }
         markTestSkipped('Requires python-dbus and PyGObject');
         return;
       }

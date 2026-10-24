@@ -112,6 +112,7 @@ ObexObjectManager::ObexObjectManager(sdbus::IConnection &conn,
         }
       });
 
+  subscribe_properties();
   root_proxy_ = sdbus::createProxy(conn_, sdbus::ServiceName{kObexService},
                                    sdbus::ObjectPath{kObexRootPath});
 
@@ -143,8 +144,8 @@ ObexObjectManager::ObexObjectManager(sdbus::IConnection &conn,
 }
 
 ObexObjectManager::~ObexObjectManager() {
+  properties_subscription_.reset();
   std::scoped_lock lock(mutex_);
-  property_proxies_.clear();
   interfaces_by_path_.clear();
 }
 
@@ -165,7 +166,6 @@ void ObexObjectManager::on_interfaces_added(
   if (failed())
     return;
   const std::string path = object_path;
-  bool should_subscribe = false;
 
   for (const auto &[interface_name, properties] : interfaces) {
     if (!is_obex_interface(interface_name)) {
@@ -179,12 +179,7 @@ void ObexObjectManager::on_interfaces_added(
     }
     if (inserted)
       post_added(path, interface_name);
-    should_subscribe = true;
     post_properties(path, interface_name, &properties);
-  }
-
-  if (should_subscribe) {
-    subscribe_properties(path);
   }
 }
 
@@ -207,7 +202,6 @@ void ObexObjectManager::on_interfaces_removed(
         removed = known->second.erase(interface_name) != 0;
         if (known->second.empty()) {
           interfaces_by_path_.erase(known);
-          property_proxies_.erase(path);
         }
       }
     }
@@ -216,18 +210,13 @@ void ObexObjectManager::on_interfaces_removed(
   }
 }
 
-void ObexObjectManager::subscribe_properties(const std::string &object_path) {
-  std::scoped_lock lock(mutex_);
-  if (property_proxies_.contains(object_path)) {
-    return;
-  }
-
-  auto proxy = sdbus::createProxy(conn_, sdbus::ServiceName{kObexService},
-                                  sdbus::ObjectPath{object_path});
-  proxy->registerSignalHandler(
-      sdbus::InterfaceName{kPropertiesIface},
-      sdbus::SignalName{"PropertiesChanged"},
-      [this, object_path](sdbus::Signal signal) {
+void ObexObjectManager::subscribe_properties() {
+  properties_subscription_ = conn_.addMatch(
+      "type='signal',sender='org.bluez.obex',"
+      "interface='org.freedesktop.DBus.Properties',"
+      "member='PropertiesChanged',path_namespace='/org/bluez/obex'",
+      [this](sdbus::Message signal) {
+        const std::string object_path = signal.getPath();
         std::string interface_name;
         PropertiesMap changed;
         std::vector<std::string> invalidated;
@@ -293,9 +282,8 @@ void ObexObjectManager::subscribe_properties(const std::string &object_path) {
             }
           }
         }
-      });
-
-  property_proxies_[object_path] = std::move(proxy);
+      },
+      sdbus::return_slot);
 }
 
 void ObexObjectManager::post_properties(const std::string &object_path,
@@ -425,7 +413,6 @@ void ObexObjectManager::connection_failed(const std::string &message) noexcept {
     {
       std::scoped_lock lock(mutex_);
       interfaces_by_path_.clear();
-      property_proxies_.clear();
     }
     post_error("/", "org.bluez.obex.Error.Disconnected", message);
     post_sentinel(0xFF);

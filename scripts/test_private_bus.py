@@ -17,7 +17,7 @@ try:
     assert service.stdout.readline().strip() == 'ready'
     child = subprocess.Popen([
         os.environ.get('DART_EXECUTABLE', 'dart'),
-        '--packages=' + str(root / '.dart_tool/package_config.json'),
+        'run',
         str(root / 'test/support/native_scenarios.dart'), scenario],
         cwd=root, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if scenario == 'lifecycle_signals':

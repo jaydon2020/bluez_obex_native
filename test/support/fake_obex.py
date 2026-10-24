@@ -214,12 +214,8 @@ class TestControl(dbus.service.Object):
         self.root.InterfacesAdded(
             TRANSFER_PATH, {TRANSFER_IFACE: transfer_properties("queued")}
         )
-        self.bus.flush()
-        GLib.timeout_add(50, self.complete_replacement)
-
-    def complete_replacement(self):
         self.transfer.set_status("complete")
-        return False
+        self.bus.flush()
 
 
 def main():

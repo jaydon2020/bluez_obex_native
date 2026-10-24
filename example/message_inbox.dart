@@ -10,6 +10,7 @@
 import 'dart:io';
 
 import 'obex_example_utils.dart';
+import 'package:bluez_obex_native/src/internal/transfer_completion.dart';
 
 Future<void> main(List<String> args) async {
   if (hasFlag(args, '--help') || hasFlag(args, '-h')) {
@@ -112,19 +113,20 @@ Future<void> main(List<String> args) async {
       final targetFile = 'message.bmsg';
       final absoluteTargetFile = File(targetFile).absolute.path;
       print('Downloading message to $absoluteTargetFile...');
-      final transfer = await message.get(absoluteTargetFile, attachment: false);
-      print('Transfer started: ${transfer.transferPath}');
+      final transfer = await waitForTransfer(
+        client,
+        () => message.get(absoluteTargetFile, attachment: false),
+      );
+      print('Transfer complete: ${transfer.transferPath}');
+      if (!File(absoluteTargetFile).existsSync()) {
+        throw StateError(
+          'Completed transfer file is missing: $absoluteTargetFile',
+        );
+      }
+      print('Message downloaded to $absoluteTargetFile');
 
       print('Marking as read...');
       await message.setRead(true);
-
-      if (File(targetFile).existsSync()) {
-        print('Message downloaded to $absoluteTargetFile');
-      } else {
-        print(
-          'Transfer complete. Note: If the file is not in the current directory, check the BlueZ OBEX daemon path.',
-        );
-      }
     } else {
       print('Unknown action: $action');
     }

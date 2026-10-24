@@ -130,51 +130,63 @@ class NativeString implements ffi.Finalizable {
   final ffi.Pointer<ffi.Char> pointer;
 
   NativeString(String value)
-    : pointer = value.toNativeUtf8(allocator: calloc).cast<ffi.Char>();
+    : pointer = validateNativeString(
+        value,
+      ).toNativeUtf8(allocator: calloc).cast<ffi.Char>();
 
   void dispose() {
     calloc.free(pointer);
   }
 }
 
-class NativeStringMap implements ffi.Finalizable {
-  final ffi.Pointer<ffi.Pointer<ffi.Char>> keys;
-  final ffi.Pointer<ffi.Pointer<ffi.Char>> values;
-  final int count;
-  final List<ffi.Pointer<ffi.Char>> _ownedStrings;
+String validateNativeString(String value) {
+  if (value.contains('\u0000')) {
+    throw ArgumentError('Native strings must not contain NUL characters');
+  }
+  return value;
+}
 
-  NativeStringMap(Map<String, Object?> map)
-    : count = map.length,
+Map<String, String> nativeStringMapValues(Map<String, Object?> map) => {
+  for (final entry in map.entries)
+    validateNativeString(entry.key): validateNativeString(
+      NativeStringMap._filterValueToString(entry.value),
+    ),
+};
+
+class NativeStringMap implements ffi.Finalizable {
+  late final ffi.Pointer<ffi.Pointer<ffi.Char>> keys;
+  late final ffi.Pointer<ffi.Pointer<ffi.Char>> values;
+  final int count;
+  final Arena _arena;
+
+  factory NativeStringMap(Map<String, Object?> map) {
+    return NativeStringMap._(nativeStringMapValues(map));
+  }
+
+  NativeStringMap._(Map<String, String> map)
+    : _arena = Arena(),
+      count = map.length {
+    try {
       keys = map.isEmpty
           ? ffi.nullptr
-          : calloc<ffi.Pointer<ffi.Char>>(map.length),
+          : _arena<ffi.Pointer<ffi.Char>>(map.length);
       values = map.isEmpty
           ? ffi.nullptr
-          : calloc<ffi.Pointer<ffi.Char>>(map.length),
-      _ownedStrings = [] {
-    var index = 0;
-    for (final entry in map.entries) {
-      final key = entry.key.toNativeUtf8(allocator: calloc).cast<ffi.Char>();
-      final value = _filterValueToString(
-        entry.value,
-      ).toNativeUtf8(allocator: calloc).cast<ffi.Char>();
-      _ownedStrings.addAll([key, value]);
-      keys[index] = key;
-      values[index] = value;
-      index += 1;
+          : _arena<ffi.Pointer<ffi.Char>>(map.length);
+      var index = 0;
+      for (final entry in map.entries) {
+        keys[index] = entry.key.toNativeUtf8(allocator: _arena).cast();
+        values[index] = entry.value.toNativeUtf8(allocator: _arena).cast();
+        index += 1;
+      }
+    } catch (_) {
+      dispose();
+      rethrow;
     }
   }
 
   void dispose() {
-    for (final pointer in _ownedStrings) {
-      calloc.free(pointer);
-    }
-    if (keys != ffi.nullptr) {
-      calloc.free(keys);
-    }
-    if (values != ffi.nullptr) {
-      calloc.free(values);
-    }
+    _arena.releaseAll();
   }
 
   static String _filterValueToString(Object? value) {

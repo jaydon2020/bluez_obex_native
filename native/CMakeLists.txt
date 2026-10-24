@@ -70,7 +70,11 @@ set_target_properties(bluez_obex_native PROPERTIES
 )
 
 if(UNIX AND NOT APPLE)
-  target_link_options(bluez_obex_native PRIVATE "-Wl,--exclude-libs,ALL")
+  target_link_options(bluez_obex_native PRIVATE
+    "-Wl,--exclude-libs,ALL"
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports.map")
+  set_property(TARGET bluez_obex_native APPEND PROPERTY
+    LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/exports.map")
 endif()
 
 if(ANDROID)

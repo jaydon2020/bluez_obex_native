@@ -178,6 +178,37 @@ Future<void> main(List<String> args) async {
         'Malformed signal terminated the native stream',
       );
       await client.getManagedObjects();
+    } else if (args.single == 'input_validation') {
+      Future<void> rejected(Future<Object?> Function() call) async {
+        try {
+          await call();
+        } on ArgumentError {
+          return;
+        }
+        throw StateError('Invalid native argument was dispatched');
+      }
+
+      await rejected(
+        () =>
+            client.createSession('AA:BB:CC:DD:EE:FF', target: 'pbap\u0000map'),
+      );
+      await rejected(
+        () => client
+            .transfer('/org/bluez/obex/client/session0/transfer0\u0000suffix')
+            .cancel(),
+      );
+      await rejected(
+        () => client
+            .phonebook('/org/bluez/obex/client/session0')
+            .list(filters: {'SearchValue': 'Ada\u0000Grace'}),
+      );
+      final props = await client
+          .transfer('/org/bluez/obex/client/session0/transfer0')
+          .properties();
+      check(
+        props.status == 'active',
+        'Invalid cancellation mutated the transfer',
+      );
     } else if (args.single == 'mixed_close') {
       var completions = 0;
       Future<T> counted<T>(Future<T> future) => future.then((value) {

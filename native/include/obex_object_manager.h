@@ -71,7 +71,7 @@ private:
                            const InterfacesMap &interfaces);
   void on_interfaces_removed(const sdbus::ObjectPath &object_path,
                              const std::vector<std::string> &interfaces);
-  void subscribe_properties(const std::string &object_path);
+  void subscribe_properties();
   void post_properties(const std::string &object_path,
                        const std::string &interface_name,
                        const PropertiesMap *properties = nullptr);
@@ -93,6 +93,6 @@ private:
   std::atomic_bool failed_{false};
 
   std::mutex mutex_;
-  std::map<std::string, std::unique_ptr<sdbus::IProxy>> property_proxies_;
+  sdbus::Slot properties_subscription_;
   std::map<std::string, InterfacesMap> interfaces_by_path_;
 };

@@ -3,6 +3,7 @@ name: CI
 on:
   push:    { branches: [main, develop] }
   pull_request: { branches: [main] }
+  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +13,61 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  test-dart:
+    name: Dart and private-bus tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - name: Install native and private-bus dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ pkg-config libsystemd-dev \
+            dbus-daemon python3-dbus python3-gi
+      - run: dart pub get
+      - run: dart test
+      - run: flutter pub get
+        working-directory: example/flutter_phone_message
+      - run: flutter test
+        working-directory: example/flutter_phone_message
+
+  package:
+    name: Archive, offline build and relocated bundle
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - name: Install package verification dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ pkg-config binutils libsystemd-dev \
+            dbus-daemon python3-dbus python3-gi
+      - run: dart pub get
+      - run: /usr/bin/python3 scripts/verify_package.py
+
+  generated-bindings:
+    name: Generated Dart bindings
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - name: Install libclang
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libclang-19-dev cmake ninja-build g++ pkg-config libsystemd-dev
+      - run: dart pub get
+      - run: dart run ffigen --config ffigen.yaml
+      - run: git diff --exit-code -- lib/bluez_obex_native_bindings_generated.dart
+
   # ── Format ────────────────────────────────────────────────────────────────
   format:
     name: Format check
@@ -25,23 +81,25 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends clang-format-19
-      - run: flutter pub get
-      - run: dart format --set-exit-if-changed lib/ example/
+      - run: dart pub get
+      - run: dart format --output=none --set-exit-if-changed lib/ example/ hook/ test/
       - run: ./scripts/clang_format.sh check
 
   # ── Static analysis + pub points dry-run ─────────────────────────────────
   analyze:
-    name: Flutter analyze + pub dry-run
+    name: Analysis and pub dry-run
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
-      - run: flutter pub get
-      - run: flutter analyze --fatal-infos
+      - run: dart pub get
       # Verify all pub.dev requirements pass before any PR merges.
       - run: dart pub publish --dry-run
+      - run: flutter pub get
+        working-directory: example/flutter_phone_message
+      - run: dart analyze --fatal-infos
 
   # ── C++ unit tests ───────────────────────────────────────────────────────
   test-cpp:
@@ -131,7 +189,7 @@ jobs:
     name: Coverage
     runs-on: ubuntu-24.04
     needs: [test-cpp]
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
