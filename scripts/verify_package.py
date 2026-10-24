@@ -58,7 +58,7 @@ def main():
             "native/third_party/sdbus-cpp/CMakeLists.txt",
             "native/third_party/sdbus-cpp/COPYING",
             "native/third_party/sdbus-cpp/COPYING-LGPL-Exception",
-            "LICENSES/Apache-2.0.txt", "docs/api.md", "docs/verification.md",
+            "LICENSES/Apache-2.0.txt", "doc/api.md", "doc/verification.md",
         ):
             if not (package / required).is_file():
                 raise RuntimeError(f"Missing release file: {required}")

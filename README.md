@@ -128,8 +128,8 @@ await client.dispose();
 
 ## Documentation
 
-* [API reference](docs/api.md)
-* [Verification guide](docs/verification.md)
+* [API reference](doc/api.md)
+* [Verification guide](doc/verification.md)
 
 ## Acknowledgements
 
@@ -152,7 +152,7 @@ ctest --test-dir build/native-tests --output-on-failure
 ```
 
 Release verification, including the exact pub archive, an offline consumer build
-and loading a relocated bundle, is documented in [docs/verification.md](docs/verification.md).
+and loading a relocated bundle, is documented in [doc/verification.md](doc/verification.md).
 
 ## Flutter help
 
