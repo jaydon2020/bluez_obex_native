@@ -1,4 +1,4 @@
-## 0.0.1
+## 0.1.0
 
 * Initial Linux release with BlueZ OBEX sessions and transfers, PBAP contact
   operations, MAP messaging, and system-bus device discovery.
