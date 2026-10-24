@@ -29,7 +29,9 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  final limitStr = hasFlag(args, '--limit') ? optionValue(args, '--limit') : null;
+  final limitStr = hasFlag(args, '--limit')
+      ? optionValue(args, '--limit')
+      : null;
   final limit = limitStr != null ? int.tryParse(limitStr) : null;
 
   final positionalArgs = <String>[];
@@ -88,14 +90,17 @@ Future<void> main(List<String> args) async {
       // current session by listing messages and matching by the final path segment
       // (the MAP message handle, which is stable across sessions for the same device).
       final requestedHandle = messagePath.split('/').last;
-      print('Resolving message handle "$requestedHandle" in current session...');
+      print(
+        'Resolving message handle "$requestedHandle" in current session...',
+      );
       final allMessages = await session.messageAccess.listMessages(
         'telecom/msg/inbox',
         filters: {},
       );
       final matched = allMessages.where(
-        (m) => m.objectPath.split('/').last == requestedHandle ||
-               m.objectPath == messagePath,
+        (m) =>
+            m.objectPath.split('/').last == requestedHandle ||
+            m.objectPath == messagePath,
       );
       if (matched.isEmpty) {
         print('Error: Message "$requestedHandle" not found in inbox.');
@@ -116,7 +121,9 @@ Future<void> main(List<String> args) async {
       if (File(targetFile).existsSync()) {
         print('Message downloaded to $absoluteTargetFile');
       } else {
-        print('Transfer complete. Note: If the file is not in the current directory, check the BlueZ OBEX daemon path.');
+        print(
+          'Transfer complete. Note: If the file is not in the current directory, check the BlueZ OBEX daemon path.',
+        );
       }
     } else {
       print('Unknown action: $action');

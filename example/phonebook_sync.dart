@@ -13,19 +13,18 @@ import 'obex_example_utils.dart';
 
 Future<void> main(List<String> args) async {
   if (hasFlag(args, '--help') || hasFlag(args, '-h')) {
-    printUsage(
-      'dart run example/phonebook_sync.dart [address]',
-      [
-        'Connects to a Bluetooth device, creates a PBAP session, and downloads contacts to contacts.vcf.',
-        '',
-        '  address    The Bluetooth address (e.g. AA:BB:CC:DD:EE:FF)',
-        '  --limit <number>  Max number of contacts to fetch (default: all)',
-      ],
-    );
+    printUsage('dart run example/phonebook_sync.dart [address]', [
+      'Connects to a Bluetooth device, creates a PBAP session, and downloads contacts to contacts.vcf.',
+      '',
+      '  address    The Bluetooth address (e.g. AA:BB:CC:DD:EE:FF)',
+      '  --limit <number>  Max number of contacts to fetch (default: all)',
+    ]);
     return;
   }
 
-  final limitStr = hasFlag(args, '--limit') ? optionValue(args, '--limit') : null;
+  final limitStr = hasFlag(args, '--limit')
+      ? optionValue(args, '--limit')
+      : null;
   final limit = limitStr != null ? int.tryParse(limitStr) : null;
 
   final positionalArgs = <String>[];
@@ -70,7 +69,10 @@ Future<void> main(List<String> args) async {
 
     final targetFile = 'contacts.vcf';
     print('Pulling all contacts to $targetFile...');
-    final transfer = await session.phonebook.pullAll(targetFile, filters: filters);
+    final transfer = await session.phonebook.pullAll(
+      targetFile,
+      filters: filters,
+    );
     print('Transfer started: ${transfer.transferPath}');
 
     // Basic file existence check
