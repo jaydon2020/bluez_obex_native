@@ -3,6 +3,27 @@
 Native Dart bindings for BlueZ OBEX sessions, transfers, phonebook access, and
 message access.
 
+## Supported features
+
+| Area | Supported features | BlueZ interface |
+| --- | --- | --- |
+| Platform | Linux with Dart 3.10+ or Flutter; the build hook validates x64, IA-32, ARM, ARM64, RISC-V 32, and RISC-V 64 ELF targets | Native Assets |
+| Bluetooth devices | Read known-device address, name, paired/connected state, and UUID metadata from the system bus | `org.bluez.Device1` |
+| OBEX sessions | Create and remove sessions, read session properties, and query capabilities | `org.bluez.obex.Client1`, `Session1` |
+| Object lifecycle | Initial object snapshot plus added, removed, property-changed, error, and stream-complete events | `ObjectManager`, `Properties` |
+| PBAP phonebooks | Select a phonebook, list/search contacts, get size, update version, list filter fields, pull all contacts, and pull one vCard | `PhonebookAccess1` |
+| MAP folders | Set and list folders, list filter fields, and update the inbox | `MessageAccess1` |
+| MAP messages | List, download, and push messages; read message properties; set read and deleted state | `MessageAccess1`, `Message1` |
+| Transfers | Read transfer properties and cancel, suspend, or resume transfers; track completion through events | `Transfer1` |
+| Filters | Typed string, boolean, integer, and string-list arguments for PBAP and MAP operations | PBAP/MAP dictionaries |
+| Development | Simulated contacts, messages, sessions, transfers, and lifecycle events without Bluetooth hardware | Dart simulation backend |
+| Packaging | Automatic native build and bundling, trusted prebuilt-library override, and CMake toolchain support for AGL/Yocto cross-builds | Dart Native Assets |
+
+PBAP and MAP are the first-class profile APIs. Availability of individual
+operations and filters still depends on the paired phone and the permissions it
+grants. Pairing, trust management, Bluetooth connection policy, OPP, and FTP
+profile-specific operations are outside this package.
+
 ## Getting Started
 
 The public API is object oriented and starts with `BlueZObexClient`.
