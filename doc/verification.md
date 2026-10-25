@@ -21,9 +21,8 @@ ctest --test-dir build --output-on-failure
 ./scripts/clang_tidy.sh build
 ./scripts/asan.sh build-asan
 ./scripts/coverage.sh build-cov
-./scripts/generate_proxies.sh
 dart run ffigen --config ffigen.yaml
-git diff --exit-code -- native/generated lib/bluez_obex_native_bindings_generated.dart
+git diff --exit-code -- lib/bluez_obex_native_bindings_generated.dart
 ```
 
 Run the Flutter example suite from `example/flutter_phone_message` with
@@ -51,7 +50,7 @@ The archive excludes `build/`, `build-*/`, Python bytecode, editor settings,
 The two planning files remain local and do not belong in implementation commits.
 
 CI runs Dart/private-bus and Flutter tests, native tests, analysis, formatting,
-both generators, archive verification, sanitizers, and static native analysis.
+Dart binding generation, archive verification, sanitizers, and static native analysis.
 Coverage runs on pull requests and release tags. Tag publication depends on the
 same verification workflow and checks that the tag matches `pubspec.yaml`.
 

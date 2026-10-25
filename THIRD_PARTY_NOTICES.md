@@ -60,12 +60,12 @@ changes are Copyright 2026 Jian De.
 
 ## BlueZ OBEX API definitions
 
-The XML files under `interfaces/` are project-authored machine-readable
-declarations based on the public
-[BlueZ 5.87 OBEX D-Bus API documentation](https://github.com/bluez/bluez/tree/5.87/doc).
-The generated proxy headers under `native/generated/` identify
-`sdbus-c++-xml2cpp` as their generator. The XML and generated proxy files are
-Copyright 2026 Jian De and are licensed under the project BSD 3-Clause License.
+The checked-in proxy headers under `native/generated/` implement declarations
+from the public
+[BlueZ 5.87 OBEX D-Bus API documentation](https://github.com/bluez/bluez/tree/5.87/doc)
+and identify `sdbus-c++-xml2cpp` as their generator. The generated proxy files
+are Copyright 2026 Jian De and are licensed under the project BSD 3-Clause
+License.
 
 BlueZ is a trademark of the Bluetooth SIG. This attribution does not imply
 endorsement by the BlueZ project or the Bluetooth SIG.

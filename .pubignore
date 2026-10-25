@@ -31,7 +31,6 @@ native/test/
 native/third_party/sdbus-cpp/build/
 native/third_party/sdbus-cpp/.git/
 
-interfaces/
 scripts/
 .github/
 .clang-format

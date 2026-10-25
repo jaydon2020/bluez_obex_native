@@ -84,8 +84,8 @@ final client = await BlueZObexClient.simulated();
 
 This template uses the following structure:
 
-* `native`: Contains the native C/C++ source, generated sdbus-c++ proxies,
-  D-Bus XML interfaces, and CMake configuration.
+* `native`: Contains the native C/C++ source, checked-in sdbus-c++ proxies,
+  and CMake configuration.
 
 * `lib`: Contains the Dart code that defines the API of the plugin, and which
   calls into the native code using `dart:ffi`.
