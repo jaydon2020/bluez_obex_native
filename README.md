@@ -138,8 +138,12 @@ await client.dispose();
   lifetime design, and development scripts are derived from this project.
 * [appstream_dart](https://github.com/meta-flutter/appstream_dart)
   (Apache-2.0): the original pattern for the build hook and library loader.
-* [sdbus-c++](https://github.com/Kistler-Group/sdbus-cpp) (LGPL-2.1): the
-  D-Bus C++ binding used by the native library.
+* [sdbus-c++](https://github.com/Kistler-Group/sdbus-cpp)
+  (LGPL-2.1-or-later with its LGPL Exception 1.0): the D-Bus C++ binding used
+  by the native library.
+
+The complete credits, exact vendored revision, upstream source links, and
+license locations are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Verification
 

@@ -55,6 +55,9 @@ def main():
                     raise RuntimeError(f"Development file in archive: {member.name}")
             payload.extractall(package, filter="data")
         for required in (
+            "THIRD_PARTY_NOTICES.md",
+            "LICENSES/Dart-SDK.txt",
+            "LICENSES/Flutter.txt",
             "native/third_party/sdbus-cpp/CMakeLists.txt",
             "native/third_party/sdbus-cpp/COPYING",
             "native/third_party/sdbus-cpp/COPYING-LGPL-Exception",

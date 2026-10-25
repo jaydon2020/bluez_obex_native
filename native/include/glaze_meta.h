@@ -1,9 +1,8 @@
-/*
- * Copyright (c) 2026 Jian De jiande2020@gmail.com. All rights reserved.
- *
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Joel Winarske <joel.winarske@gmail.com>
+// SPDX-FileCopyrightText: 2026 Jian De
+//
+// Adapted from bluez_native; see THIRD_PARTY_NOTICES.md.
 
 // glaze_meta.h — lightweight compile-time struct reflection for native_comms
 // Channel B payloads. Provides glz::meta<T> and glz::field() used by

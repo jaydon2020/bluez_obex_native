@@ -1,4 +1,9 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Joel Winarske <joel.winarske@gmail.com>
+# SPDX-FileCopyrightText: 2026 Jian De
+# Adapted from bluez_native; see THIRD_PARTY_NOTICES.md.
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
