@@ -6,6 +6,8 @@
   names/messages. Close safely after service replacement or bus failure.
 * Bundle the native library through Dart Native Assets, validate its ELF
   architecture, and resolve the bundled asset without working-directory lookup.
+* Resolve the native library beside a loaded Flutter `libapp.so` for AGL
+  homescreen deployments without `LD_LIBRARY_PATH`.
 * Reject embedded NUL input and preserve fast transfer events across path reuse.
 * Include simulated operation, CLI/Flutter examples, private-bus regression tests,
   and archive/offline-build verification.

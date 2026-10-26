@@ -115,9 +115,11 @@ user-define rather than relying on `CC`, `CXX`, or `SDKTARGETSYSROOT` being
 visible inside the hook. A recipe that builds and injects the library itself can
 set `skip_native_build: true` in the same section. `SKIP_NATIVE_BUILD` remains
 available for direct/legacy hook execution. `BLUEZ_OBEX_LIB` explicitly loads a
-trusted prebuilt library during development. Normal loading uses the declared
-Native Asset; it does not search the working directory or development caches.
-The hook checks the built ELF architecture before bundling it.
+trusted prebuilt library during development. Normal loading uses the system
+loader, then searches beside an already loaded bundle library such as
+`libapp.so`, and finally resolves the declared Native Asset. It does not search
+the working directory or development caches. The hook checks the built ELF
+architecture before bundling it.
 
 ## Binding to native code
 
