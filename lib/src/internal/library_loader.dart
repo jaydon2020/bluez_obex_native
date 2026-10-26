@@ -67,6 +67,18 @@ DynamicLibrary loadBluezObexNative() {
     errors.add('Native Asset resolution: $error');
   }
 
+  final mappedSibling = findSiblingOfLoadedLibrary(
+    _libraryName,
+    flutterOnly: false,
+  );
+  if (mappedSibling != null) {
+    try {
+      return DynamicLibrary.open(mappedSibling);
+    } catch (error) {
+      errors.add('dlopen($mappedSibling): $error');
+    }
+  }
+
   throw StateError(
     'Failed to load $_libraryName. Set BLUEZ_OBEX_LIB to its absolute path.\n'
     'Errors:\n${errors.join('\n')}',
@@ -74,7 +86,11 @@ DynamicLibrary loadBluezObexNative() {
 }
 
 /// Finds [libraryName] beside a library already mapped into this process.
-String? findSiblingOfLoadedLibrary(String libraryName, {String? maps}) {
+String? findSiblingOfLoadedLibrary(
+  String libraryName, {
+  String? maps,
+  bool flutterOnly = true,
+}) {
   if (!Platform.isLinux) return null;
   try {
     final contents = maps ?? File('/proc/self/maps').readAsStringSync();
@@ -90,9 +106,11 @@ String? findSiblingOfLoadedLibrary(String libraryName, {String? maps}) {
       final slash = path.lastIndexOf('/');
       if (slash <= 0) continue;
       final directory = path.substring(0, slash);
-      if (!seen.add(directory)) continue;
       final basename = path.substring(slash + 1);
-      if (basename == 'libapp.so' || basename.startsWith('libflutter_')) {
+      if (!flutterOnly ||
+          basename == 'libapp.so' ||
+          basename.startsWith('libflutter_')) {
+        if (!seen.add(directory)) continue;
         directories.add(directory);
       }
     }
