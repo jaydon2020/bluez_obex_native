@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2026 Joel Winarske <joel.winarske@gmail.com>
-# SPDX-FileCopyrightText: 2026 Jian De
+# SPDX-FileCopyrightText: 2026 Jian De Seak
 # Adapted from bluez_native; see THIRD_PARTY_NOTICES.md.
 
 set -euo pipefail
