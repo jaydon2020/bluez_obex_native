@@ -24,6 +24,21 @@ operations and filters still depends on the paired phone and the permissions it
 grants. Pairing, trust management, Bluetooth connection policy, OPP, and FTP
 profile-specific operations are outside this package.
 
+## Installation
+
+```sh
+dart pub add bluez_obex_native
+```
+
+```dart
+import 'package:bluez_obex_native/bluez_obex_native.dart';
+```
+
+Flutter applications can use `flutter pub add bluez_obex_native` instead. The
+package supports the same Dart SDK baseline as
+[`bluez_native`](https://github.com/jwinarske/bluez_native): Dart 3.10 or
+newer.
+
 ## Getting Started
 
 The public API is object oriented and starts with `BlueZObexClient`.
@@ -45,9 +60,11 @@ try {
 }
 ```
 
-The Dart API exposes every method and property in the bundled current BlueZ
+The Dart API exposes every method and property in the bundled BlueZ 5.87 API
+snapshot for
 `Client1`, `Session1`, `Transfer1`, `PhonebookAccess1`, `MessageAccess1`, and
-`Message1` interfaces. ObjectManager additions, removals, and property changes
+`Message1`. Later BlueZ releases remain compatible while those interfaces do
+not change. ObjectManager additions, removals, and property changes
 are delivered through `client.events`. Bus disconnection or an OBEX service
 restart emits an error and `streamDone`, then closes the stream. Discard the
 old object proxies, dispose the client, and connect again to obtain fresh state.
@@ -82,7 +99,7 @@ final client = await BlueZObexClient.simulated();
 
 ## Project structure
 
-This template uses the following structure:
+This package uses the following structure:
 
 * `native`: Contains the native C/C++ source, checked-in sdbus-c++ proxies,
   and CMake configuration.
@@ -113,13 +130,20 @@ The toolchain must select the target C/C++ compilers and define
 Native Assets runs hooks in a semi-hermetic environment, so Yocto must use this
 user-define rather than relying on `CC`, `CXX`, or `SDKTARGETSYSROOT` being
 visible inside the hook. A recipe that builds and injects the library itself can
-set `skip_native_build: true` in the same section. `SKIP_NATIVE_BUILD` remains
-available for direct/legacy hook execution. `BLUEZ_OBEX_LIB` explicitly loads a
-trusted prebuilt library during development. Normal loading uses the system
-loader, then searches beside an already loaded bundle library such as
-`libapp.so`, and finally resolves the declared Native Asset. It does not search
-the working directory or development caches. The hook checks the built ELF
-architecture before bundling it.
+set `skip_native_build: true` in the same section. This disables CMake and does
+not register a CodeAsset, so the recipe must install
+`libbluez_obex_native.so` in a system loader directory or in the Flutter
+bundle's library directory beside the mapped `libapp.so`/`libflutter_*`
+library. `SKIP_NATIVE_BUILD` remains available for direct or legacy hook
+execution.
+
+`BLUEZ_OBEX_LIB` explicitly loads a trusted absolute library path for local
+development and diagnostics; it is not the normal production deployment path.
+Normal loading uses the system loader, then searches beside an already loaded
+Flutter bundle library, and finally resolves the declared Native Asset. It does
+not search the working directory, unrelated mapped-library directories, or
+development caches. The hook checks the built ELF architecture before bundling
+it.
 
 ## Binding to native code
 
@@ -180,9 +204,3 @@ ctest --test-dir build/native-tests --output-on-failure
 
 Release verification, including the exact pub archive, an offline consumer build
 and loading a relocated bundle, is documented in [doc/verification.md](doc/verification.md).
-
-## Flutter help
-
-For help getting started with Flutter, view our
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
