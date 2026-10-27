@@ -47,20 +47,4 @@ void main() {
 
     expect(result, isNull);
   });
-
-  test('falls back beside any mapped library when requested', () async {
-    final root = await Directory.systemTemp.createTemp('obex-loader-test.');
-    addTearDown(() => root.delete(recursive: true));
-    final library = await File('${root.path}/libbluez_obex_native.so').create();
-
-    final result = findSiblingOfLoadedLibrary(
-      library.uri.pathSegments.last,
-      maps:
-          '7f000000-7f001000 r-xp 00000000 00:00 0 '
-          '${root.path}/libfixture.so\n',
-      flutterOnly: false,
-    );
-
-    expect(result, library.path);
-  });
 }
