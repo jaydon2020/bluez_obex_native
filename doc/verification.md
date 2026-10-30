@@ -62,12 +62,10 @@ Neither the test scripts nor package verification upload a package.
 
 ## AGL/Yocto and hardware limits
 
-Use the README's `cmake_toolchain_file` user-define for source cross-builds.
-The toolchain must select target compilers, sysroot and target pkg-config search
-paths. The hook verifies ELF class/machine against the requested Dart target
-before registering the asset and does not execute the target library. For
-recipe-supplied builds, `skip_native_build: true` delegates artifact installation
-to the recipe; configure an explicit trusted library override at runtime if
+For source cross-builds, the recipe must expose target compilers, sysroot and
+target pkg-config search paths to CMake. The hook does not execute the target
+library. For recipe-supplied builds, `skip_native_build: true` delegates
+artifact installation to the recipe; configure a trusted library override if
 needed. Normal Dart asset loading requires the hook's bundled asset.
 
 Host simulation/private-bus tests do not establish real phone or AGL support.

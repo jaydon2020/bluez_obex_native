@@ -114,23 +114,11 @@ This package uses the following structure:
 
 `hook/build.dart` drives CMake and declares `libbluez_obex_native.so` as a
 bundled CodeAsset. Dart and Flutter consumers therefore build and package the
-native library automatically. The hook requires a Linux host and Linux target.
-For cross-architecture builds, provide a CMake toolchain file through the root
-application's `pubspec.yaml`:
-
-```yaml
-hooks:
-  user_defines:
-    bluez_obex_native:
-      cmake_toolchain_file: /path/to/agl-toolchain.cmake
-```
-
-The toolchain must select the target C/C++ compilers and define
-`CMAKE_SYSROOT`; the hook refuses to label a host build as a foreign target.
-Native Assets runs hooks in a semi-hermetic environment, so Yocto must use this
-user-define rather than relying on `CC`, `CXX`, or `SDKTARGETSYSROOT` being
-visible inside the hook. A recipe that builds and injects the library itself can
-set `skip_native_build: true` in the same section. This disables CMake and does
+native library automatically. For AGL cross-builds, the hook uses the compiler
+and sysroot environment
+provided by the build recipe, like `bluez_native`. A recipe that builds and
+injects the library itself can set `skip_native_build: true` in the application's
+`hooks.user_defines.bluez_obex_native` section. This disables CMake and does
 not register a CodeAsset, so the recipe must install
 `libbluez_obex_native.so` in a system loader directory or in the Flutter
 bundle's library directory beside the mapped `libapp.so`/`libflutter_*`
@@ -142,8 +130,7 @@ development and diagnostics; it is not the normal production deployment path.
 Normal loading uses the system loader, then searches beside an already loaded
 Flutter bundle library, and finally resolves the declared Native Asset. It does
 not search the working directory, unrelated mapped-library directories, or
-development caches. The hook checks the built ELF architecture before bundling
-it.
+development caches.
 
 ## Binding to native code
 
